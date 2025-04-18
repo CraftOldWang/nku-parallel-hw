@@ -2,7 +2,7 @@
 #include <chrono>
 #include <fstream>
 #include "md5.h"
-#include "md5.simd.h"
+#include "md5_simd.h"
 #include <iomanip>
 using namespace std;
 using namespace chrono;
