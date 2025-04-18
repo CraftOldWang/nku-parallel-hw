@@ -2,7 +2,6 @@
 #include <chrono>
 #include <fstream>
 #include "md5.h"
-#include "md5_simd.h"
 #include <iomanip>
 using namespace std;
 using namespace chrono;
@@ -64,7 +63,6 @@ int main()
             {
                 // TODO：对于SIMD实验，将这里替换成你的SIMD MD5函数
                 MD5Hash(pw, state);
-                
 
                 // 以下注释部分用于输出猜测和哈希，但是由于自动测试系统不太能写文件，所以这里你可以改成cout
                 // a<<pw<<"\t";

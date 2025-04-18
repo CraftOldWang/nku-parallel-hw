@@ -47,6 +47,15 @@ typedef unsigned int bit32;
 #define I(x, y, z) ((y) ^ ((x) | (~z)))
 
 
+// 每次处理四个; x,y,z 是 uint32x4_t  (bit32 是unsigned int )
+#define F_SIMD(x, y, z) (vorrq_u32(vandq_u32((x),(y)), vandq_u32((vmvnq_u32(x),(z)))))
+#define G_SIMD(x, y, z) (vorrq_u32(vandq_u32((x),(z)), vandq_u32(((y),vmvnq_u32(z)))))
+#define H_SIMD(x, y, z) (veorq_u32(veorq_u32((x), (y)), (z)))
+#define I_SIMD(x, y, z) (veorq_u32((y), vorrq_u32((x), vmvnq_u32(z))))
+
+// uint32x4_t F_SIMD_F(uint32x4_t x, uint32x4_t y, uint32x4_t z){
+//   return 1;
+// }
 
 /**
  * @Rotate Left.
@@ -62,26 +71,64 @@ typedef unsigned int bit32;
 // 但是你需要注意的是#define的功能及其效果，可以发现这里的FGHI是没有返回值的，为什么呢？你可以查询#define的含义和用法
 #define ROTATELEFT(num, n) (((num) << (n)) | ((num) >> (32-(n))))
 
+#define ROTATELEFT_SIMD(num, n) (vorrq_u32(vshlq_n_u32((num), (n)), vshrq_n_u32((num), (32-(n)))))
+
+
 #define FF(a, b, c, d, x, s, ac) { \
   (a) += F ((b), (c), (d)) + (x) + ac; \
   (a) = ROTATELEFT ((a), (s)); \
   (a) += (b); \
 }
 
+// vdupq_n_u32 拿一个 bit32 -> 一个 4* bit32 的 向量
+#define FF_SIMD(a, b, c, d, x, s, ac) { \
+  (a) = vaddq_u32((a), vaddq_u32(vaddq_u32(F_SIMD((b), (c), (d)), (x)), vdupq_n_u32(ac))); \
+  (a) = ROTATELEFT_SIMD((a), (s)); \
+  (a) = vaddq_u32((a), (b)); \
+}
+
+
 #define GG(a, b, c, d, x, s, ac) { \
   (a) += G ((b), (c), (d)) + (x) + ac; \
   (a) = ROTATELEFT ((a), (s)); \
   (a) += (b); \
 }
+
+#define GG_SIMD(a, b, c, d, x, s, ac) { \
+  (a) = vaddq_u32((a), vaddq_u32(vaddq_u32(G_SIMD((b), (c), (d)), (x)), vdupq_n_u32(ac))); \
+  (a) = ROTATELEFT_SIMD((a), (s)); \
+  (a) = vaddq_u32((a), (b)); \
+}
+
+
+
+
 #define HH(a, b, c, d, x, s, ac) { \
   (a) += H ((b), (c), (d)) + (x) + ac; \
   (a) = ROTATELEFT ((a), (s)); \
   (a) += (b); \
 }
+
+#define HH_SIMD(a, b, c, d, x, s, ac) { \
+  (a) = vaddq_u32((a), vaddq_u32(vaddq_u32(H_SIMD((b), (c), (d)), (x)), vdupq_n_u32(ac))); \
+  (a) = ROTATELEFT_SIMD((a), (s)); \
+  (a) = vaddq_u32((a), (b)); \
+}
+
+
+
 #define II(a, b, c, d, x, s, ac) { \
   (a) += I ((b), (c), (d)) + (x) + ac; \
   (a) = ROTATELEFT ((a), (s)); \
   (a) += (b); \
 }
 
-void MD5Hash_SIMD(string input, bit32 *state);
+#define II_SIMD(a, b, c, d, x, s, ac) { \
+  (a) = vaddq_u32((a), vaddq_u32(vaddq_u32(I_SIMD((b), (c), (d)), (x)), vdupq_n_u32(ac))); \
+  (a) = ROTATELEFT_SIMD((a), (s)); \
+  (a) = vaddq_u32((a), (b)); \
+}
+
+// void MD5Hash(string input, bit32 *state);
+
+void MD5Hash_SIMD(string input1, uint32x4_t *state);
