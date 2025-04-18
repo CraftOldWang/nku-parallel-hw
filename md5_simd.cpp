@@ -1,4 +1,4 @@
-#include "md5.h"
+#include "md5_simd.h"
 #include <iomanip>
 #include <assert.h>
 #include <chrono>
@@ -75,45 +75,53 @@ Byte *StringProcess(string input, int *n_byte)
 
 
 /**
- * MD5Hash: 将单个输入字符串转换成MD5
- * @param input 输入
+ * MD5Hash_SIMD: 将 4 个输入字符串转换成MD5
+ * @param input 输入 , 长度为4 的string 数组
  * @param[out] state 用于给调用者传递额外的返回值，即最终的缓冲区，也就是MD5的结果
  * @return Byte消息数组
  */
-void MD5Hash(string input, bit32 *state)
+void MD5Hash_SIMD(string *input, uint32x4_t *state)
 {
 
-	Byte *paddedMessage;
-	int *messageLength = new int[1];
-	for (int i = 0; i < 1; i += 1)
+	Byte **paddedMessages = new Byte*[4];
+	int *messageLength = new int[4];
+	for (int i = 0; i < 4; i += 1)
 	{
-		paddedMessage = StringProcess(input, &messageLength[i]);
+		paddedMessages[i] = StringProcess(input[i], &messageLength[i]);
 		// cout<<messageLength[i]<<endl;
 		assert(messageLength[i] == messageLength[0]);
 	}
 	int n_blocks = messageLength[0] / 64;
 
 	// bit32* state= new bit32[4];
-	state[0] = 0x67452301;
-	state[1] = 0xefcdab89;
-	state[2] = 0x98badcfe;
-	state[3] = 0x10325476;
+
+	// state[0] = 0x67452301;
+	// state[1] = 0xefcdab89;
+	// state[2] = 0x98badcfe;
+	// state[3] = 0x10325476;
+
+    state[0] = vdupq_n_u32(0x67452301);
+    state[1] = vdupq_n_u32(0xefcdab89);
+    state[2] = vdupq_n_u32(0x98badcfe);
+    state[3] = vdupq_n_u32(0x10325476);  
 
 	// 逐block地更新state
 	for (int i = 0; i < n_blocks; i += 1)
 	{
-		bit32 x[16];
+		// bit32 x[16];
+        uint32x4_t x[16];
 
 		// 下面的处理，在理解上较为复杂
 		for (int i1 = 0; i1 < 16; ++i1)
 		{
-			x[i1] = (paddedMessage[4 * i1 + i * 64]) |
-					(paddedMessage[4 * i1 + 1 + i * 64] << 8) |
-					(paddedMessage[4 * i1 + 2 + i * 64] << 16) |
-					(paddedMessage[4 * i1 + 3 + i * 64] << 24);
+			x[i1] = (paddedMessages[i][4 * i1 + i * 64]) |
+					(paddedMessages[i][4 * i1 + 1 + i * 64] << 8) |
+					(paddedMessages[i][4 * i1 + 2 + i * 64] << 16) |
+					(paddedMessages[i][4 * i1 + 3 + i * 64] << 24);
 		}
 
-		bit32 a = state[0], b = state[1], c = state[2], d = state[3];
+		// bit32 a = state[0], b = state[1], c = state[2], d = state[3];
+        uint32x4_t a = state[0],  b = state[1], c = state[2], d = state[3];
 
 		auto start = system_clock::now();
 		/* Round 1 */
@@ -213,7 +221,8 @@ void MD5Hash(string input, bit32 *state)
 
 	// 释放动态分配的内存
 	// 实现SIMD并行算法的时候，也请记得及时回收内存！
-	delete[] paddedMessage;
+    // for () paddedMessages 里面的也要删掉
+	delete[] paddedMessages;
 	delete[] messageLength;
 }
 
