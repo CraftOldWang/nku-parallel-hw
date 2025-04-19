@@ -1,27 +1,40 @@
-1197978270
-3151045238
-4149984006
-1214463997
-res_vec[0]: 1197978270
-res_vec[1]: 1197978270
-res_vec[2]: 1197978270
-res_vec[3]: 1197978270
+=== 字节反转测试 ===
 
-res_vec[0]: 3151045238
-res_vec[1]: 3151045238
-res_vec[2]: 3151045238
-res_vec[3]: 3151045238
+使用传统方法反转字节：
+值 0:
+  原始值: 0x12345678
+  反转后: 0x78563412
 
-res_vec[0]: 4149984006
-res_vec[1]: 4149984006
-res_vec[2]: 4149984006
-res_vec[3]: 4149984006
+值 1:
+  原始值: 0xaabbccdd
+  反转后: 0xddccbbaa
 
-res_vec[0]: 1214463997
-res_vec[1]: 1214463997
-res_vec[2]: 1214463997
-res_vec[3]: 1214463997
+值 2:
+  原始值: 0x01020304
+  反转后: 0x04030201
 
-ALL TEST PASSED
+值 3:
+  原始值: 0xffeeddcc
+  反转后: 0xccddeeff
+
+使用 NEON 指令反转字节：
+原始向量:
+  [0] = 0x12345678
+  [1] = 0xaabbccdd
+  [2] = 0x01020304
+  [3] = 0xffeeddcc
+反转后向量:
+  [0] = 0x78563412
+  [1] = 0xddccbbaa
+  [2] = 0x04030201
+  [3] = 0xccddeeff
+
+验证 NEON 结果与传统方法一致：
+值 0: 匹配
+值 1: 匹配
+值 2: 匹配
+值 3: 匹配
+
+总结: NEON 实现与传统方法完全匹配
 
 Authorized users only. All activities may be monitored and reported.

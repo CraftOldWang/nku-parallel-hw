@@ -59,20 +59,48 @@ int main()
         if (curr_num > 1000000)
         {
             auto start_hash = system_clock::now();
-            bit32 state[4];
-            for (string pw : q.guesses)
-            {
-                // TODO：对于SIMD实验，将这里替换成你的SIMD MD5函数
-                MD5Hash(pw, state);
+            // bit32 state[4];
 
-                // 以下注释部分用于输出猜测和哈希，但是由于自动测试系统不太能写文件，所以这里你可以改成cout
-                // a<<pw<<"\t";
-                // for (int i1 = 0; i1 < 4; i1 += 1)
-                // {
-                //     a << std::setw(8) << std::setfill('0') << hex << state[i1];
-                // }
-                // a << endl;
+            // for (string pw : q.guesses)
+            // {
+            //     // TODO：对于SIMD实验，将这里替换成你的SIMD MD5函数
+            //     MD5Hash(pw, state);
+
+
+            //     // 以下注释部分用于输出猜测和哈希，但是由于自动测试系统不太能写文件，所以这里你可以改成cout
+            //     a<<pw<<"\t";
+            //     for (int i1 = 0; i1 < 4; i1 += 1)
+            //     {
+            //         a << std::setw(8) << std::setfill('0') << hex << state[i1];
+            //     }
+            //     a << endl;
+            // }
+            uint32x4_t state[4]; // 每个lane 一个 口令的 一部分 state
+            
+            for(size_t i = 0;i<q.guesses.size();i++){
+                string pw[4] = {"", "", "", ""};
+                for (int j = 0; j < 4 && (i + j) < q.guesses.size(); ++j) {
+                    pw[j] = q.guesses[i + j];
+                }
+                MD5Hash_SIMD(pw,state);
+                
+                //     // 以下注释部分用于输出猜测和哈希，但是由于自动测试系统不太能写文件，所以这里你可以改成cout
+                //  a<<pw<<"\t";
+                //  for (int i1 = 0; i1 < 4; i1 += 1)
+                //  {
+                //      a << std::setw(8) << std::setfill('0') << hex << state[i1];
+                //  }
+                //  a << endl;
+                // 
+                // for (int j = 0; j < 4 && (i + j) < q.guesses.size(); ++j) {
+                //     cout << pw[j] << "\t";  // 输出口令
+                //     for (int i1 = 0; i1 < 4; i1++) {
+                //         cout << setw(8) << setfill('0') << hex << state[i1] << "\t";  // 输出哈希
+                //     }
+                //     cout << endl;
+                // }            
             }
+            
 
             // 在这里对哈希所需的总时长进行计算
             auto end_hash = system_clock::now();

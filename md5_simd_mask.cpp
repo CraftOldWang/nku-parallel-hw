@@ -8,6 +8,7 @@ using namespace chrono;
 
 const int BATCH_SIZE = 4;
 
+//TODO grok  说 口令 预处理成的块 数量不同， 可以使用掩码来进行每次的更新
 
 /**
  * StringProcess: 将单个输入字符串转换成MD5计算所需的消息数组；  
@@ -123,10 +124,10 @@ void MD5Hash_SIMD(string *input, uint32x4_t *state)
     state[2] = vdupq_n_u32(0x98badcfe);
     state[3] = vdupq_n_u32(0x10325476);  
 
-	bit32 tmp_state0[4];
-	bit32 tmp_state1[4];
-	bit32 tmp_state2[4];
-	bit32 tmp_state3[4];
+	bit32 tmp0[4];
+	bit32 tmp1[4];
+	bit32 tmp2[4];
+	bit32 tmp3[4];
 
 	// 逐block地更新state
 	for (int i = 0; i < max_blocks; i += 1)
@@ -241,37 +242,37 @@ void MD5Hash_SIMD(string *input, uint32x4_t *state)
 
 		// 在每个 口令 结束之前， 用tmp存一下。 其对应的state
 		if (i == blockCounts[0] - 1) {
-			tmp_state0[0] = vgetq_lane_u32(state[0], 0);
-			tmp_state1[0] = vgetq_lane_u32(state[1], 0);
-			tmp_state2[0] = vgetq_lane_u32(state[2], 0);
-			tmp_state3[0] = vgetq_lane_u32(state[3], 0);
+			tmp0[0] = vgetq_lane_u32(state[0], 0);
+			tmp1[0] = vgetq_lane_u32(state[1], 0);
+			tmp2[0] = vgetq_lane_u32(state[2], 0);
+			tmp3[0] = vgetq_lane_u32(state[3], 0);
 		}
 		if (i == blockCounts[1] - 1) {
-			tmp_state0[1] = vgetq_lane_u32(state[0], 1);
-			tmp_state1[1] = vgetq_lane_u32(state[1], 1);
-			tmp_state2[1] = vgetq_lane_u32(state[2], 1);
-			tmp_state3[1] = vgetq_lane_u32(state[3], 1);
+			tmp0[1] = vgetq_lane_u32(state[0], 1);
+			tmp1[1] = vgetq_lane_u32(state[1], 1);
+			tmp2[1] = vgetq_lane_u32(state[2], 1);
+			tmp3[1] = vgetq_lane_u32(state[3], 1);
 		}
 		if (i == blockCounts[2] - 1) {
-			tmp_state0[2] = vgetq_lane_u32(state[0], 2);
-			tmp_state1[2] = vgetq_lane_u32(state[1], 2);
-			tmp_state2[2] = vgetq_lane_u32(state[2], 2);
-			tmp_state3[2] = vgetq_lane_u32(state[3], 2);
+			tmp0[2] = vgetq_lane_u32(state[0], 2);
+			tmp1[2] = vgetq_lane_u32(state[1], 2);
+			tmp2[2] = vgetq_lane_u32(state[2], 2);
+			tmp3[2] = vgetq_lane_u32(state[3], 2);
 		}
 		if (i == blockCounts[3] - 1) {
-			tmp_state0[3] = vgetq_lane_u32(state[0], 3);
-			tmp_state1[3] = vgetq_lane_u32(state[1], 3);
-			tmp_state2[3] = vgetq_lane_u32(state[2], 3);
-			tmp_state3[3] = vgetq_lane_u32(state[3], 3);
+			tmp0[3] = vgetq_lane_u32(state[0], 3);
+			tmp1[3] = vgetq_lane_u32(state[1], 3);
+			tmp2[3] = vgetq_lane_u32(state[2], 3);
+			tmp3[3] = vgetq_lane_u32(state[3], 3);
 		}
 		
 
 	}
 
-	state[0] = vld1q_u32(tmp_state0);
-	state[1] = vld1q_u32(tmp_state1);
-	state[2] = vld1q_u32(tmp_state2);
-	state[3] = vld1q_u32(tmp_state3);
+	state[0] = vld1q_u32(tmp0);
+	state[1] = vld1q_u32(tmp1);
+	state[2] = vld1q_u32(tmp2);
+	state[3] = vld1q_u32(tmp3);
 
 
 	// 下面的处理，在理解上较为复杂
