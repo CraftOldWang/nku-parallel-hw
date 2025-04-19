@@ -73,6 +73,59 @@ Byte *StringProcess(string input, int *n_byte)
 	return paddedMessage;
 }
 
+// vdupq_n_u32 拿一个 bit32 -> 一个 4* bit32 的 向量 ； 
+// x 是4个口令部分的向量。。。一共4个一起处理
+#define FF_SIMD(a, b, c, d, x, s, ac) { \
+	(a) = vaddq_u32((a), vaddq_u32(vaddq_u32(F_SIMD((b), (c), (d)), (x)), vdupq_n_u32(ac))); \
+	(a) = ROTATELEFT_SIMD((a), (s)); \
+	(a) = vaddq_u32((a), (b)); \
+  }
+
+
+
+  // #define GG(a, b, c, d, x, s, ac) { \
+  //   (a) += G ((b), (c), (d)) + (x) + ac; \
+  //   (a) = ROTATELEFT ((a), (s)); \
+  //   (a) += (b); \
+  // }
+  
+  #define GG_SIMD(a, b, c, d, x, s, ac) { \
+	(a) = vaddq_u32((a), vaddq_u32(vaddq_u32(G_SIMD((b), (c), (d)), (x)), vdupq_n_u32(ac))); \
+	(a) = ROTATELEFT_SIMD((a), (s)); \
+	(a) = vaddq_u32((a), (b)); \
+  }
+  
+  
+  
+  
+  // #define HH(a, b, c, d, x, s, ac) { \
+  //   (a) += H ((b), (c), (d)) + (x) + ac; \
+  //   (a) = ROTATELEFT ((a), (s)); \
+  //   (a) += (b); \
+  // }
+  
+  #define HH_SIMD(a, b, c, d, x, s, ac) { \
+	(a) = vaddq_u32((a), vaddq_u32(vaddq_u32(H_SIMD((b), (c), (d)), (x)), vdupq_n_u32(ac))); \
+	(a) = ROTATELEFT_SIMD((a), (s)); \
+	(a) = vaddq_u32((a), (b)); \
+  }
+  
+  
+  
+  // #define II(a, b, c, d, x, s, ac) { \
+  //   (a) += I ((b), (c), (d)) + (x) + ac; \
+  //   (a) = ROTATELEFT ((a), (s)); \
+  //   (a) += (b); \
+  // }
+  
+  #define II_SIMD(a, b, c, d, x, s, ac) { \
+	(a) = vaddq_u32((a), vaddq_u32(vaddq_u32(I_SIMD((b), (c), (d)), (x)), vdupq_n_u32(ac))); \
+	(a) = ROTATELEFT_SIMD((a), (s)); \
+	(a) = vaddq_u32((a), (b)); \
+  }
+
+
+
 
 /**
  * MD5Hash_SIMD: 将 4 个输入字符串转换成MD5
