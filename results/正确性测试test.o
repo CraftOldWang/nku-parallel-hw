@@ -1,0 +1,29 @@
+=== MD5 SIMD 正确性测试 ===
+
+测试字符串 1 (长度: 13)
+标准 MD5: 36e1d246c453fb9191bf0be36304d857
+SIMD MD5[0]: 36e1d246c453fb9191bf0be36304d857
+结果匹配!
+
+测试字符串 2 (长度: 23)
+标准 MD5: 5877563d1a38ac5a6c4f3c1bf2bddf8c
+SIMD MD5[1]: 5877563d1a38ac5a6c4f3c1bf2bddf8c
+结果匹配!
+
+测试字符串 3 (长度: 65)
+标准 MD5: e62bf6db3d19b5c38a39d19e059a140c
+SIMD MD5[2]: e62bf6db3d19b5c38a39d19e059a140c
+结果匹配!
+
+测试字符串 4 (长度: 194)
+标准 MD5: bba46eb8b53cf65d50ca54b2f8afd9db
+SIMD MD5[3]: bba46eb8b53cf65d50ca54b2f8afd9db
+结果匹配!
+
+=== 性能测试 ===
+标准 MD5 处理 fa0 个字符串用时: 0.009403 秒
+SIMD MD5 处理 fa0 个字符串用时: 0.030118 秒
+加速比: 0.312205x
+ALL TEST PASSED
+
+Authorized users only. All activities may be monitored and reported.

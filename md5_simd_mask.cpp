@@ -9,6 +9,11 @@ using namespace chrono;
 const int BATCH_SIZE = 4;
 
 //TODO grok  说 口令 预处理成的块 数量不同， 可以使用掩码来进行每次的更新
+// Claude 也说可以使用掩码， 还有什么位掩码  
+// 		方案 1：使用完成掩码保存结果（推荐）
+//	 	方案 2：使用位掩码保护已完成的状态（更高效但更复杂）
+
+
 
 /**
  * StringProcess: 将单个输入字符串转换成MD5计算所需的消息数组；  
