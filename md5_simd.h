@@ -57,9 +57,9 @@ typedef unsigned int bit32;
 
 #define I_SIMD(x, y, z) (veorq_u32((y), vorrq_u32((x), vmvnq_u32(z))))
 
-// uint32x4_t F_SIMD_F(uint32x4_t x, uint32x4_t y, uint32x4_t z){
-//   return 1;
-// }
+uint32x4_t F_SIMD_F(uint32x4_t x, uint32x4_t y, uint32x4_t z){
+  return 1;
+}
 
 /**
  * @Rotate Left.
@@ -76,24 +76,36 @@ typedef unsigned int bit32;
 // #define ROTATELEFT(num, n) (((num) << (n)) | ((num) >> (32-(n))))
 
 // #define ROTATELEFT_SIMD(num, n) (vorrq_u32(vshlq_n_u32((num), (n)), vshrq_n_u32((num), (32-(n)))))
-#define ROTATELEFT_SIMD(num, n) \
-    (vorrq_u32( \
-        vshlq_u32((num), vdupq_n_s32(n)), \
-        vshlq_u32((num), vdupq_n_s32((n)- 32)) \
-    ))
+// #define ROTATELEFT_SIMD(num, n) \
+//     (vorrq_u32( \
+//         vshlq_u32((num), vdupq_n_s32(n)), \
+//         vshlq_u32((num), vdupq_n_s32((n)- 32)) \
+//     ))
 
-// #define FF(a, b, c, d, x, s, ac) { \
-//   (a) += F ((b), (c), (d)) + (x) + ac; \
-//   (a) = ROTATELEFT ((a), (s)); \
-//   (a) += (b); \
-// }
+
+// 改写成内联函数; 不太看得懂，gpt说是在 .h 文件里写 static inline
+
+static inline uint32x4_t ROTATELEFT_SIMD(uint32x4_t& num, const int n) {
+    return vorrq_u32( 
+      vshlq_n_u32(num, n), 
+      vshrq_n_u32(num, 32 - n)
+    );
+}
+
 
 // vdupq_n_u32 拿一个 bit32 -> 一个 4* bit32 的 向量 ； 
 // x 是4个口令部分的向量。。。一共4个一起处理
-#define FF_SIMD(a, b, c, d, x, s, ac) { \
-  (a) = vaddq_u32((a), vaddq_u32(vaddq_u32(F_SIMD((b), (c), (d)), (x)), vdupq_n_u32(ac))); \
-  (a) = ROTATELEFT_SIMD((a), (s)); \
-  (a) = vaddq_u32((a), (b)); \
+// #define FF_SIMD(a, b, c, d, x, s, ac) { \
+//   (a) = vaddq_u32((a), vaddq_u32(vaddq_u32(F_SIMD((b), (c), (d)), (x)), vdupq_n_u32(ac))); \
+//   (a) = ROTATELEFT_SIMD((a), (s)); \
+//   (a) = vaddq_u32((a), (b)); \
+// }
+
+static inline void FF_SIMD(uint32x4_t& a, uint32x4_t& b, uint32x4_t& c, 
+                          uint32x4_t& d, uint32x4_t& x,const int s, bit32 ac){
+  a = vaddq_u32((a), vaddq_u32(vaddq_u32(F_SIMD((b), (c), (d)), (x)), vdupq_n_u32(ac))); 
+  a = ROTATELEFT_SIMD((a), (s)); 
+  a = vaddq_u32((a), (b)); 
 }
 
 
