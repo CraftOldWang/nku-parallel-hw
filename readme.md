@@ -37,5 +37,6 @@ FFGGHHII 没有写成宏函数 应该没关系
 
 SIMD 版本hash 51s  正常版本 9s； 可能 用宏函数会更快？？
 
+不是宏函数的问题， 把串行版本 换成 inline函数，并没有变慢。 (见md5_part_no_macro .h .cpp)
  
 
