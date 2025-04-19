@@ -21,9 +21,9 @@ SIMD MD5[3]: bba46eb8b53cf65d50ca54b2f8afd9db
 结果匹配!
 
 === 性能测试 ===
-标准 MD5 处理 fa0 个字符串用时: 0.00281 秒
-SIMD MD5 处理 fa0 个字符串用时: 0.003796 秒
-加速比: 0.740253x
+标准 MD5 处理 fa0 个字符串用时: 0.009337 秒
+SIMD MD5 处理 fa0 个字符串用时: 0.030777 秒
+加速比: 0.303376x
 ALL TEST PASSED
 
 Authorized users only. All activities may be monitored and reported.
