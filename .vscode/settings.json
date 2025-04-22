@@ -67,6 +67,7 @@
         "xtr1common": "cpp",
         "xutility": "cpp",
         "random": "cpp",
-        "cassert": "cpp"
+        "cassert": "cpp",
+        "filesystem": "cpp"
     }
 }
