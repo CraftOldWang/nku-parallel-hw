@@ -8,77 +8,7 @@ using namespace std;
 using namespace chrono;
 
 const int BATCH_SIZE = 4;
-extern Byte *StringProcess(string input, int *n_byte); // 结果整得好麻烦。因为重名了。。。
-
-// /**
-//  * StringProcess: 将单个输入字符串转换成MD5计算所需的消息数组；  
-//  * 这部分没有并行.... 
-//  * @param input 输入
-//  * @param[out] n_byte 用于给调用者传递额外的返回值，即最终Byte数组的长度
-//  * @return Byte消息数组
-//  */
-// Byte *StringProcess(string input, int *n_byte)
-// {
-// 	// 将输入的字符串转换为Byte为单位的数组
-// 	Byte *blocks = (Byte *)input.c_str();
-// 	int length = input.length();
-
-// 	// 计算原始消息长度（以比特为单位）
-// 	int bitLength = length * 8;
-
-// 	// paddingBits: 原始消息需要的padding长度（以bit为单位）
-// 	// 对于给定的消息，将其补齐至length%512==448为止
-// 	// 需要注意的是，即便给定的消息满足length%512==448，也需要再pad 512bits
-// 	int paddingBits = bitLength % 512;
-// 	if (paddingBits > 448)
-// 	{
-// 		paddingBits = 512 - (paddingBits - 448);
-// 	}
-// 	else if (paddingBits < 448)
-// 	{
-// 		paddingBits = 448 - paddingBits;
-// 	}
-// 	else if (paddingBits == 448)
-// 	{
-// 		paddingBits = 512;
-// 	}
-
-// 	// 原始消息需要的padding长度（以Byte为单位）
-// 	int paddingBytes = paddingBits / 8;
-// 	// 创建最终的字节数组
-// 	// length + paddingBytes + 8:
-// 	// 1. length为原始消息的长度（bits）
-// 	// 2. paddingBytes为原始消息需要的padding长度（Bytes）
-// 	// 3. 在pad到length%512==448之后，需要额外附加64bits的原始消息长度，即8个bytes
-// 	int paddedLength = length + paddingBytes + 8;
-// 	Byte *paddedMessage = new Byte[paddedLength];
-
-// 	// 复制原始消息
-// 	memcpy(paddedMessage, blocks, length);
-
-// 	// 添加填充字节。填充时，第一位为1，后面的所有位均为0。
-// 	// 所以第一个byte是0x80
-// 	paddedMessage[length] = 0x80;							 // 添加一个0x80字节
-// 	memset(paddedMessage + length + 1, 0, paddingBytes - 1); // 填充0字节
-
-// 	// 添加消息长度（64比特，小端格式）
-// 	for (int i = 0; i < 8; ++i)
-// 	{
-// 		// 特别注意此处应当将bitLength转换为uint64_t
-// 		// 这里的length是原始消息的长度
-// 		paddedMessage[length + paddingBytes + i] = ((uint64_t)length * 8 >> (i * 8)) & 0xFF;
-// 	}
-
-// 	// 验证长度是否满足要求。此时长度应当是512bit的倍数
-// 	int residual = 8 * paddedLength % 512;
-// 	// assert(residual == 0);
-
-// 	// 在填充+添加长度之后，消息被分为n_blocks个512bit的部分
-// 	*n_byte = paddedLength;
-// 	return paddedMessage;
-// }
-
-
+extern Byte *StringProcess(string input, int *n_byte); // 结果整得好麻烦。因为重名了
 
 
 /**
@@ -104,20 +34,12 @@ void MD5Hash_SIMD(string *input, uint32x4_t *state)
 	// int n_blocks = messageLength[0] / 64;
 
     // 2. 找到最长的块数
-    int max_blocks = blockCounts[0];
+    int max_blocks = 0;
     for (int i = 1; i < 4; i++) {
         if (blockCounts[i] > max_blocks) {
             max_blocks = blockCounts[i];
         }
     }
-
-
-	// bit32* state= new bit32[4];
-
-	// state[0] = 0x67452301;
-	// state[1] = 0xefcdab89;
-	// state[2] = 0x98badcfe;
-	// state[3] = 0x10325476;
 
     state[0] = vdupq_n_u32(0x67452301);
     state[1] = vdupq_n_u32(0xefcdab89);

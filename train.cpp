@@ -23,6 +23,10 @@ void model::train(string path)
 {
     string pw;
     ifstream train_set(path);
+    if (train_set.fail()){
+        cerr << "can't open file : " << path << endl;
+        return; // 或抛出异常，或使用其他错误处理机制
+    }
     int lines = 0;
     cout<<"Training..."<<endl;
     cout<<"Training phase 1: reading and parsing passwords..."<<endl;

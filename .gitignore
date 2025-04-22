@@ -1,3 +1,5 @@
 *.zip
 PCFG_framework/.vscode
 main
+*.exe
+guessdata/

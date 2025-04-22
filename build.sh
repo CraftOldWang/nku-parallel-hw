@@ -1,6 +1,16 @@
 #!/bin/bash
 
-# main.cpp train.cpp guessing.cpp md5.cpp
+# 选择你要编译的源文件集合（取消注释你需要的部分）
+
+# 标准版本
+# CPP_FILES=(
+#     main.cpp
+#     train.cpp 
+#     guessing.cpp 
+#     md5.cpp
+# )
+
+# SIMD 版本
 # CPP_FILES=(
 #     main_simd.cpp
 #     md5_simd.cpp
@@ -8,11 +18,13 @@
 #     md5.cpp
 # )
 
+# AVX 版本
 CPP_FILES=(
-    main.cpp
-    train.cpp 
+    main_avx.cpp
+    train.cpp
     guessing.cpp 
     md5.cpp
+    md5_avx.cpp
 )
 
 # 获取脚本的当前目录
@@ -29,12 +41,12 @@ for i in "${!CPP_FILES[@]}"; do
     CPP_FILES[$i]="$SCRIPT_DIR/${CPP_FILES[$i]}"
 done
 
-# 获取优化等级（从命令行参数中取，比如 -O1、-O2、-O3）
-OPT_LEVEL="$1"  # 如果你没传参数，这就是空字符串
+# 获取所有命令行参数作为编译选项
+COMPILE_OPTIONS="$@"  # 这会捕获所有命令行参数
 
 # 编译指定的 .cpp 文件为一个名为 main 的可执行文件
-echo "Compiling with: g++ ${CPP_FILES[*]} -o $BUILD_DIR/main $OPT_LEVEL"
-g++ "${CPP_FILES[@]}" -o "$BUILD_DIR/main" $OPT_LEVEL
+echo "Compiling with: g++ ${CPP_FILES[*]} -o $BUILD_DIR/main $COMPILE_OPTIONS"
+g++ "${CPP_FILES[@]}" -o "$BUILD_DIR/main" $COMPILE_OPTIONS
 
 # 检查编译结果
 if [ $? -eq 0 ]; then
