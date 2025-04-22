@@ -9,7 +9,7 @@ using namespace chrono;
 
 #define ROUND_OPERATION
 #define PERMUTATION_BYTE
-// #define TEMP_MASKING
+#define TEMP_MASKING // 这个masking 占用的时间似乎很少....  主要还是 ROUND_OPERATION 占用了1s左右的时间吧。
 #define SUM_TO_STATE
 #define LOAD_BLOCK
 
