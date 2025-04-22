@@ -7,6 +7,12 @@
 using namespace std;
 using namespace chrono;
 
+#define ROUND_OPERATION
+#define PERMUTATION_BYTE
+// #define TEMP_MASKING
+#define SUM_TO_STATE
+#define LOAD_BLOCK
+
 const int BATCH_SIZE = 4;
 extern Byte *StringProcess(string input, int *n_byte); // 结果整得好麻烦。因为重名了
 
@@ -17,21 +23,25 @@ extern Byte *StringProcess(string input, int *n_byte); // 结果整得好麻烦�
  * @param[out] state 用于给调用者传递额外的返回值，即最终的缓冲区，也就是MD5的结果
  * @return Byte消息数组
  */
-void MD5Hash_SIMD(string *input, uint32x4_t *state)
+void MD5Hash_SIMD(string &input1,string &input2, string & input3, string& input4, uint32x4_t *state)
 {
 
 	Byte **paddedMessages = new Byte*[4];
 	int *messageLength = new int[4];
 	int *blockCounts = new int[4];
 
-	for (int i = 0; i < 4; i += 1)
-	{
-		paddedMessages[i] = StringProcess(input[i], &messageLength[i]);
-		blockCounts[i] = messageLength[i] / 64;
+
+	paddedMessages[0] = StringProcess(input1, &messageLength[0]);
+	blockCounts[0] = messageLength[0] / 64;
+	paddedMessages[1] = StringProcess(input2, &messageLength[1]);
+	blockCounts[1] = messageLength[1] / 64;
+	paddedMessages[2] = StringProcess(input3, &messageLength[2]);
+	blockCounts[2] = messageLength[2] / 64;
+	paddedMessages[3] = StringProcess(input4, &messageLength[3]);
+	blockCounts[3] = messageLength[3] / 64;
 		// cout<<messageLength[i]<<endl;
 		// assert(messageLength[i] == messageLength[0]);
-	}
-	// int n_blocks = messageLength[0] / 64;
+	
 
     // 2. 找到最长的块数
     int max_blocks = 0;
@@ -46,16 +56,18 @@ void MD5Hash_SIMD(string *input, uint32x4_t *state)
     state[2] = vdupq_n_u32(0x98badcfe);
     state[3] = vdupq_n_u32(0x10325476);  
 
-	bit32 tmp_state0[4];
-	bit32 tmp_state1[4];
-	bit32 tmp_state2[4];
-	bit32 tmp_state3[4];
+	#ifdef TEMP_MASKING
+	alignas(16) bit32 tmp_state0[4];
+	alignas(16) bit32 tmp_state1[4];
+	alignas(16) bit32 tmp_state2[4];
+	alignas(16) bit32 tmp_state3[4];
+	#endif
 
 	// 逐block地更新state
 	for (int i = 0; i < max_blocks; i += 1)
 	{
 		// bit32 x[16];
-        uint32x4_t x[16];
+        alignas(16) uint32x4_t x[16];
 
 		// 下面的处理，在理解上较为复杂
 		// for (int i1 = 0; i1 < 16; ++i1)
@@ -66,9 +78,10 @@ void MD5Hash_SIMD(string *input, uint32x4_t *state)
 		// 			(paddedMessages[4 * i1 + 3 + i * 64] << 24);
 		// }
 
+		#ifdef LOAD_BLOCK
 		// 4.1 加载每个字符串的当前块
 		for (int i1 = 0; i1 < 16; i1++) {
-			uint32_t values[4] = {0}; // 默认值为 0 ; 如果某个 口令 已经算完了， 它的部分就填为0
+			alignas(16) uint32_t values[4] = {0}; // 默认值为 0 ; 如果某个 口令 已经算完了， 它的部分就填为0
 			for (int j = 0; j < 4; j++) {
 				if (i < blockCounts[j]) { // 检查是否超出块数
 					values[j] = (paddedMessages[j][4 * i1 + i * 64]) |
@@ -79,12 +92,14 @@ void MD5Hash_SIMD(string *input, uint32x4_t *state)
 			}
 			x[i1] = vld1q_u32(values); // 加载到 SIMD 向量
 		}
-
+		#endif
 
 		// bit32 a = state[0], b = state[1], c = state[2], d = state[3];
-        uint32x4_t a = state[0],  b = state[1], c = state[2], d = state[3];
+        alignas(16) uint32x4_t a = state[0],  b = state[1], c = state[2], d = state[3];
 
 		auto start = system_clock::now();
+
+		#ifdef ROUND_OPERATION
 		/* Round 1 */
 		FF_SIMD(a, b, c, d, x[0], s11, 0xd76aa478);
 		FF_SIMD(d, a, b, c, x[1], s12, 0xe8c7b756);
@@ -156,12 +171,17 @@ void MD5Hash_SIMD(string *input, uint32x4_t *state)
 		II_SIMD(d, a, b, c, x[11], s42, 0xbd3af235);
 		II_SIMD(c, d, a, b, x[2], s43, 0x2ad7d2bb);
 		II_SIMD(b, c, d, a, x[9], s44, 0xeb86d391);
+		#endif
 
+		#ifdef SUM_TO_STATE
 		state[0] = vaddq_u32(state[0], a);
 		state[1] = vaddq_u32(state[1], b);
 		state[2] = vaddq_u32(state[2], c);
 		state[3] = vaddq_u32(state[3], d);
+		#endif
 
+
+		#ifdef TEMP_MASKING
 		// 在每个 口令 结束之前， 用tmp存一下。 其对应的state
 		if (i == blockCounts[0] - 1) {
 			tmp_state0[0] = vgetq_lane_u32(state[0], 0);
@@ -187,14 +207,14 @@ void MD5Hash_SIMD(string *input, uint32x4_t *state)
 			tmp_state2[3] = vgetq_lane_u32(state[2], 3);
 			tmp_state3[3] = vgetq_lane_u32(state[3], 3);
 		}
-		
+		#endif
 
 	}
 
-	state[0] = vld1q_u32(tmp_state0);
-	state[1] = vld1q_u32(tmp_state1);
-	state[2] = vld1q_u32(tmp_state2);
-	state[3] = vld1q_u32(tmp_state3);
+	// state[0] = vld1q_u32(tmp_state0);
+	// state[1] = vld1q_u32(tmp_state1);
+	// state[2] = vld1q_u32(tmp_state2);
+	// state[3] = vld1q_u32(tmp_state3);
 
 
 	// 下面的处理，在理解上较为复杂
@@ -207,6 +227,7 @@ void MD5Hash_SIMD(string *input, uint32x4_t *state)
 	// 			   ((value & 0xff000000) >> 24); // 将最高字节移到最低位
 	// }
 
+	#ifdef PERMUTATION_BYTE
 	// 小端序大端序转换
 	// 使用 NEON 指令一次性处理所有字节反转
 	uint8x16_t bytes0 = vreinterpretq_u8_u32(state[0]);
@@ -223,6 +244,7 @@ void MD5Hash_SIMD(string *input, uint32x4_t *state)
 	state[1] = vreinterpretq_u32_u8(bytes1);
 	state[2] = vreinterpretq_u32_u8(bytes2);
 	state[3] = vreinterpretq_u32_u8(bytes3);
+	#endif
 
 	// 输出最终的hash结果
 	// for (int i1 = 0; i1 < 4; i1 += 1)

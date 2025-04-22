@@ -17,6 +17,7 @@ int main()
     double time_hash = 0;  // 用于MD5哈希的时间
     double time_guess = 0; // 哈希和猜测的总时长
     double time_train = 0; // 模型训练的总时长
+    double time_string_copy = 0;
     PriorityQueue q;
     auto start_train = system_clock::now();
     q.m.train("/guessdata/Rockyou-singleLined-full.txt");
@@ -38,7 +39,7 @@ int main()
         q.total_guesses = q.guesses.size();
         if (q.total_guesses - curr_num >= 100000)
         {
-            cout << "Guesses generated: " <<history + q.total_guesses << endl;
+            // cout << "Guesses generated: " <<history + q.total_guesses << endl;
             curr_num = q.total_guesses;
 
             // 在此处更改实验生成的猜测上限
@@ -51,6 +52,8 @@ int main()
                 cout << "Guess time:" << time_guess - time_hash << "seconds"<< endl;
                 cout << "Hash time:" << time_hash << "seconds"<<endl;
                 cout << "Train time:" << time_train <<"seconds"<<endl;
+                // cout << "String copy time: "<< time_string_copy << "seconds"<<endl;
+                cout <<" 尝试去掉某些部分来查看到底哪里费时间"<<endl;
                 break;
             }
         }
@@ -75,30 +78,22 @@ int main()
             //     }
             //     a << endl;
             // }
-            uint32x4_t state[4]; // 每个lane 一个 口令的 一部分 state
+            alignas(16) uint32x4_t state[4]; // 每个lane 一个 口令的 一部分 state
             
-            for(size_t i = 0;i<q.guesses.size();i++){
-                string pw[4] = {"", "", "", ""};
-                for (int j = 0; j < 4 && (i + j) < q.guesses.size(); ++j) {
-                    pw[j] = q.guesses[i + j];
-                }
-                MD5Hash_SIMD(pw,state);
-                
-                //     // 以下注释部分用于输出猜测和哈希，但是由于自动测试系统不太能写文件，所以这里你可以改成cout
-                //  a<<pw<<"\t";
-                //  for (int i1 = 0; i1 < 4; i1 += 1)
-                //  {
-                //      a << std::setw(8) << std::setfill('0') << hex << state[i1];
-                //  }
-                //  a << endl;
-                // 
-                // for (int j = 0; j < 4 && (i + j) < q.guesses.size(); ++j) {
-                //     cout << pw[j] << "\t";  // 输出口令
-                //     for (int i1 = 0; i1 < 4; i1++) {
-                //         cout << setw(8) << setfill('0') << hex << state[i1] << "\t";  // 输出哈希
-                //     }
-                //     cout << endl;
-                // }            
+            size_t i =0;
+            for(;i<q.guesses.size();i+=4){
+                //HACK string 的copy 也很费时间
+                string &pw1 = q.guesses[i];
+                string &pw2 = q.guesses[i+1];
+                string &pw3 = q.guesses[i+2];
+                string &pw4 = q.guesses[i+3];
+
+                MD5Hash_SIMD(pw1,pw2,pw3,pw4,state);
+
+            }
+            bit32 state2[4];
+            for (; i < q.guesses.size(); ++i) {
+                MD5Hash(q.guesses[i], state2); // 假设你有个单个处理版本
             }
             
 

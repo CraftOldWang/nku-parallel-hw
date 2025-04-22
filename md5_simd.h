@@ -98,28 +98,28 @@ typedef unsigned int bit32;
         vshrq_n_u32((num), 32 - (n)) \
     )
 
-#define FF_SIMD(a, b, c, d, x, s, ac) do { \
+#define FF_SIMD(a, b, c, d, x, s, ac)  { \
     (a) = vaddq_u32((a), vaddq_u32(vaddq_u32(F_SIMD((b), (c), (d)), (x)), vdupq_n_u32(ac))); \
     (a) = ROTATELEFT_SIMD((a), (s)); \
     (a) = vaddq_u32((a), (b)); \
-} while(0)
+} 
 
-#define GG_SIMD(a, b, c, d, x, s, ac) do { \
+#define GG_SIMD(a, b, c, d, x, s, ac)  { \
     (a) = vaddq_u32((a), vaddq_u32(vaddq_u32(G_SIMD((b), (c), (d)), (x)), vdupq_n_u32(ac))); \
     (a) = ROTATELEFT_SIMD((a), (s)); \
     (a) = vaddq_u32((a), (b)); \
-} while(0)
+} 
 
-#define HH_SIMD(a, b, c, d, x, s, ac) do { \
+#define HH_SIMD(a, b, c, d, x, s, ac)  { \
     (a) = vaddq_u32((a), vaddq_u32(vaddq_u32(H_SIMD((b), (c), (d)), (x)), vdupq_n_u32(ac))); \
     (a) = ROTATELEFT_SIMD((a), (s)); \
     (a) = vaddq_u32((a), (b)); \
-} while(0)
+} 
 
-#define II_SIMD(a, b, c, d, x, s, ac) do { \
+#define II_SIMD(a, b, c, d, x, s, ac) { \
     (a) = vaddq_u32((a), vaddq_u32(vaddq_u32(I_SIMD((b), (c), (d)), (x)), vdupq_n_u32(ac))); \
     (a) = ROTATELEFT_SIMD((a), (s)); \
     (a) = vaddq_u32((a), (b)); \
-} while(0)
+}
 
-void MD5Hash_SIMD(string *input,  uint32x4_t *state);
+void MD5Hash_SIMD(string &input1,string &input2, string & input3, string& input4,  uint32x4_t *state);

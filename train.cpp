@@ -35,7 +35,7 @@ void model::train(string path)
         lines += 1;
         if (lines % 10000 == 0)
         {
-            cout <<"Lines processed: "<< lines << endl;
+            // cout <<"Lines processed: "<< lines << endl;
             // 在这里更改读取的训练集口令上限
             if (lines > 3000000)
             {

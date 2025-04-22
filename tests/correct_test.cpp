@@ -62,10 +62,10 @@ int correct_test() {
     cout << "=== MD5 SIMD 正确性测试 ===" << endl << endl;
     
     // 测试用字符串 - 使用不同长度测试
-    string test_strings[4] = {
-        "test string 1",                       // 短字符串
-        "This is a medium length test string", // 中等长度
-        "bvaisdbjasdkafkasdfnavkjnakdjfejfanjsdnfkajdfkajdfjkwanfdjaknsvjkanbjbjadfajwefajksdfakdnsvjadfasjdva", // 长字符串
+    alignas(16) string test_strings[4] = {
+        "test string 1 jsdnfkajdfkajdfjkwanfdjaknsvjkanbjbjadfajwefajksdfakdnsvjadfasjdvabvaisdbjasdkafkasdfnavkjnakdjfejfanjsdnfkajdfkajdfjkwanfdjaknsvjjdfjkwanfdjvjkanbjbjadfajwefajksdfakdnsvjadfasjdvabjadfajwefajksdfakdnsvjadfasjdvabvaisdbjasdkafkasdfnavkjnakdjfejfanjsdnfkajdfkajdfjkwanfdjaknsvjkanbjbjadfajwefajksdfakdnsvjadfasjdvabvaisdbjasdkafkasdfnavkjnakdjfejfanjsdnfkajdfkajdfjkwanfdjaknsrergwergweerwwe",                       // 短字符串
+        "This is a medium length test stringjsdnfkajdfkajdfjkwanfdjaknsvjkanbjbjadfajwefajksdfakdnsvjadfasjdvabvaisdbjasdkafkasdfnavkjnakdjfejfanjsdnfkajdfkajdfjkwanfdjaknsvjvjkanbjbjadfajwefajksdfakdnsvjadfasjdvajadfajwefajksdfakdnsvjadfasjdvabvaisdbjasdkafkasdfnavkjnakdjfejfanjsdnfkajdfkajdfjkwanfdjaknsvjkanbjbjadfajwefajksdfakdnsvjadfasjdvabvaisdbjasdkafkasdfnavkjnakdjfejfanjsdnfkajdfkajdfjkwanfdjaknsberwew", // 中等长度
+        "bvaisdbjasdkafkasdfnavkjnakdjfejfanjsdnfkajdfkajdfjkwanfdjaknsvjkanbjbjadfajwefajksdfakdnsvjadfasjdvabvaisdbjasdkafkasdfnavkjnakdjfejfanjsdnfkajdfkajdfjkwanfdjaknsvjvjkanbjbjadfajwefajksdjadfajwefajksdfakdnsvjadfasjdvabvaisdbjasdkafkasdfnavkjnakdjfejfanjsdnfkajdfkajdfjkwanfdjaknsvjkanbjbjadfajwefajksdfakdnsvjadfasjdvabvaisdbjasdkafkasdfnavkjnakdjfejfanjsdnfkajdfkajdfjkwanfdjaknsfakdnsvjadfasjdvaberere", // 长字符串
         "bvaisdbjasdkafkasdfnavkjnakdjfejfanjsdnfkajdfkajdfjkwanfdjaknsvjkanbjbjadfajwefajksdfakdnsvjadfasjdvabvaisdbjasdkafkasdfnavkjnakdjfejfanjsdnfkajdfkajdfjkwanfdjaknsvjkanbjbjadfajwefajksdfakdnsvjadfasjdvabvaisdbjasdkafkasdfnavkjnakdjfejfanjsdnfkajdfkajdfjkwanfdjaknsvjkanbjbjadfajwefajksdfakdnsvjadfasjdvabvaisdbjasdkafkasdfnavkjnakdjfejfanjsdnfkajdfkajdfjkwanfdjaknsvjkanbjbjadfajwefajksdfakdnsvjadfasjdva" // 非常长的字符串
     };
     
@@ -85,7 +85,7 @@ int correct_test() {
         
         // 使用 SIMD MD5 (需要4个字符串)
         uint32x4_t simd_result[4];
-        MD5Hash_SIMD(test_strings, simd_result);
+        MD5Hash_SIMD(test_strings[0], test_strings[1], test_strings[2],test_strings[3], simd_result);
         
         cout << "SIMD MD5[" << i << "]: ";
         bit32 simd_values[4];
@@ -159,7 +159,11 @@ int correct_test() {
     start = system_clock::now();
     for (int i = 0; i < N_TESTS; i++) {
         uint32x4_t simd_result[4];
-        MD5Hash_SIMD(test_strings, simd_result);
+        string &pw1 = test_strings[0];
+        string &pw2 = test_strings[1];
+        string &pw3 = test_strings[2];
+        string &pw4 = test_strings[3];
+        MD5Hash_SIMD(pw1,pw2,pw3,pw4, simd_result);
     }
     end = system_clock::now();
     duration = duration_cast<microseconds>(end - start);
