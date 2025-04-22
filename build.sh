@@ -28,6 +28,7 @@ elif [[ "$VERSION" == "1" ]]; then
         md5_simd.cpp
         guessing.cpp
         md5.cpp
+        train.cpp
     )
     OUTPUT_FILE="main"
 elif [[ "$VERSION" == "2" ]]; then

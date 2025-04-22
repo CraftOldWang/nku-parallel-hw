@@ -2,31 +2,31 @@
 
 # simd
 # # 手动指定当前文件夹中的 .cpp 文件（只写文件名，不含路径）
-# CURRENT_CPP_FILES=(  # 你只需要改这里
-#     all_tests.cpp
-#     correct_test.cpp
-#     test_nine_func.cpp
-#     # vrev32q_u8_test.cpp
-# )
-
-# # 手动指定父文件夹中的 .cpp 文件（只写文件名，不含路径）
-# PARENT_CPP_FILES=(  # 你只需要改这里
-#     md5_simd.cpp
-#     md5.cpp
-#     # md5_part_no_macro.cpp
-# )
-
-# avx
 CURRENT_CPP_FILES=(  # 你只需要改这里
     all_tests.cpp
-    correct_test_avx.cpp
+    correct_test.cpp
+    test_nine_func.cpp
+    # vrev32q_u8_test.cpp
 )
-PARENT_CPP_FILES=(  # 你只需要改这里
 
-    md5_avx.cpp
+# 手动指定父文件夹中的 .cpp 文件（只写文件名，不含路径）
+PARENT_CPP_FILES=(  # 你只需要改这里
+    md5_simd.cpp
     md5.cpp
     # md5_part_no_macro.cpp
 )
+
+# avx
+# CURRENT_CPP_FILES=(  # 你只需要改这里
+#     all_tests.cpp
+#     correct_test_avx.cpp
+# )
+# PARENT_CPP_FILES=(  # 你只需要改这里
+
+#     md5_avx.cpp
+#     md5.cpp
+#     # md5_part_no_macro.cpp
+# )
 
 # 获取脚本的当前目录
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
@@ -68,7 +68,7 @@ else
 fi
 
 
-read -p "按回车键继续..." dummy
+# read -p "按回车键继续..." dummy
 
 
 echo "Build complete."
