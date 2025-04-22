@@ -1,0 +1,9 @@
+main;[ld-linux-aarch64.so.1] 2
+main;[ld-linux-aarch64.so.1];[ld-linux-aarch64.so.1];[ld-linux-aarch64.so.1];[ld-linux-aarch64.so.1];[ld-linux-aarch64.so.1] 34
+main;[ld-linux-aarch64.so.1];[ld-linux-aarch64.so.1];[ld-linux-aarch64.so.1];[ld-linux-aarch64.so.1];[ld-linux-aarch64.so.1];[ld-linux-aarch64.so.1] 1
+main;_start;__libc_start_main;[libc.so.6];main;correct_test;FF_SIMD 3464681
+main;_start;__libc_start_main;[libc.so.6];main;correct_test;GG_SIMD 5339857
+main;_start;__libc_start_main;[libc.so.6];main;correct_test;HH_SIMD 10742386
+main;_start;__libc_start_main;[libc.so.6];main;correct_test;II_SIMD 5193927
+main;_start;__libc_start_main;[libc.so.6];main;correct_test;MD5Hash 7660
+main;_start;__libc_start_main;[libc.so.6];main;correct_test;MD5Hash_SIMD 5774916

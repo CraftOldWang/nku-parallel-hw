@@ -1,0 +1,165 @@
+main 2260742 2425993.777719:          1 cycles:u: 
+	    ffff90a1fdc0 [unknown] (/usr/lib/ld-linux-aarch64.so.1)
+
+main 2260742 2425993.777769:          1 cycles:u: 
+	    ffff90a1fdc0 [unknown] (/usr/lib/ld-linux-aarch64.so.1)
+
+main 2260742 2425993.778651:          1 cycles:u: 
+	    ffff90a0eb40 [unknown] (/usr/lib/ld-linux-aarch64.so.1)
+	    ffff90a13240 [unknown] (/usr/lib/ld-linux-aarch64.so.1)
+	    ffff90a1de6c [unknown] (/usr/lib/ld-linux-aarch64.so.1)
+	    ffff90a1a78c [unknown] (/usr/lib/ld-linux-aarch64.so.1)
+	    ffff90a1be68 [unknown] (/usr/lib/ld-linux-aarch64.so.1)
+	    ffff90a1fdd4 [unknown] (/usr/lib/ld-linux-aarch64.so.1)
+
+main 2260742 2425993.778692:         34 cycles:u: 
+	    ffff90a1354c [unknown] (/usr/lib/ld-linux-aarch64.so.1)
+	    ffff90a1de6c [unknown] (/usr/lib/ld-linux-aarch64.so.1)
+	    ffff90a1a78c [unknown] (/usr/lib/ld-linux-aarch64.so.1)
+	    ffff90a1be68 [unknown] (/usr/lib/ld-linux-aarch64.so.1)
+	    ffff90a1fdd4 [unknown] (/usr/lib/ld-linux-aarch64.so.1)
+
+main 2260742 2425993.782662:         49 cycles:u: 
+	          405d70 MD5Hash+0x3b0 (/home/s2310764/guess/main)
+	          401edc correct_test+0x6d0 (/home/s2310764/guess/main)
+	          401350 main+0xc (/home/s2310764/guess/main)
+	    ffff9058b000 [unknown] (/usr/lib64/libc.so.6)
+	    ffff9058b0d8 __libc_start_main+0x94 (/usr/lib64/libc.so.6)
+	          401270 _start+0x30 (/home/s2310764/guess/main)
+
+main 2260742 2425993.782705:        581 cycles:u: 
+	          405ff0 MD5Hash+0x630 (/home/s2310764/guess/main)
+	          401edc correct_test+0x6d0 (/home/s2310764/guess/main)
+	          401350 main+0xc (/home/s2310764/guess/main)
+	    ffff9058b000 [unknown] (/usr/lib64/libc.so.6)
+	    ffff9058b0d8 __libc_start_main+0x94 (/usr/lib64/libc.so.6)
+	          401270 _start+0x30 (/home/s2310764/guess/main)
+
+main 2260742 2425993.786623:        582 cycles:u: 
+	          406334 MD5Hash+0x974 (/home/s2310764/guess/main)
+	          401edc correct_test+0x6d0 (/home/s2310764/guess/main)
+	          401350 main+0xc (/home/s2310764/guess/main)
+	    ffff9058b000 [unknown] (/usr/lib64/libc.so.6)
+	    ffff9058b0d8 __libc_start_main+0x94 (/usr/lib64/libc.so.6)
+	          401270 _start+0x30 (/home/s2310764/guess/main)
+
+main 2260742 2425993.786665:       6448 cycles:u: 
+	          406220 MD5Hash+0x860 (/home/s2310764/guess/main)
+	          401edc correct_test+0x6d0 (/home/s2310764/guess/main)
+	          401350 main+0xc (/home/s2310764/guess/main)
+	    ffff9058b000 [unknown] (/usr/lib64/libc.so.6)
+	    ffff9058b0d8 __libc_start_main+0x94 (/usr/lib64/libc.so.6)
+	          401270 _start+0x30 (/home/s2310764/guess/main)
+
+main 2260742 2425993.790644:       6465 cycles:u: 
+	          4045dc MD5Hash_SIMD+0x204 (/home/s2310764/guess/main)
+	          401fcc correct_test+0x7c0 (/home/s2310764/guess/main)
+	          401350 main+0xc (/home/s2310764/guess/main)
+	    ffff9058b000 [unknown] (/usr/lib64/libc.so.6)
+	    ffff9058b0d8 __libc_start_main+0x94 (/usr/lib64/libc.so.6)
+	          401270 _start+0x30 (/home/s2310764/guess/main)
+
+main 2260742 2425993.790714:      73301 cycles:u: 
+	          403ffc GG_SIMD+0xc8 (/home/s2310764/guess/main)
+	          401fcc correct_test+0x7c0 (/home/s2310764/guess/main)
+	          401350 main+0xc (/home/s2310764/guess/main)
+	    ffff9058b000 [unknown] (/usr/lib64/libc.so.6)
+	    ffff9058b0d8 __libc_start_main+0x94 (/usr/lib64/libc.so.6)
+	          401270 _start+0x30 (/home/s2310764/guess/main)
+
+main 2260742 2425993.794672:      73351 cycles:u: 
+	          40403c GG_SIMD+0x108 (/home/s2310764/guess/main)
+	          401fcc correct_test+0x7c0 (/home/s2310764/guess/main)
+	          401350 main+0xc (/home/s2310764/guess/main)
+	    ffff9058b000 [unknown] (/usr/lib64/libc.so.6)
+	    ffff9058b0d8 __libc_start_main+0x94 (/usr/lib64/libc.so.6)
+	          401270 _start+0x30 (/home/s2310764/guess/main)
+
+main 2260742 2425993.794920:     523074 cycles:u: 
+	          403fa4 GG_SIMD+0x70 (/home/s2310764/guess/main)
+	          401fcc correct_test+0x7c0 (/home/s2310764/guess/main)
+	          401350 main+0xc (/home/s2310764/guess/main)
+	    ffff9058b000 [unknown] (/usr/lib64/libc.so.6)
+	    ffff9058b0d8 __libc_start_main+0x94 (/usr/lib64/libc.so.6)
+	          401270 _start+0x30 (/home/s2310764/guess/main)
+
+main 2260742 2425993.798844:     523773 cycles:u: 
+	          40414c HH_SIMD+0x6c (/home/s2310764/guess/main)
+	          401fcc correct_test+0x7c0 (/home/s2310764/guess/main)
+	          401350 main+0xc (/home/s2310764/guess/main)
+	    ffff9058b000 [unknown] (/usr/lib64/libc.so.6)
+	    ffff9058b0d8 __libc_start_main+0x94 (/usr/lib64/libc.so.6)
+	          401270 _start+0x30 (/home/s2310764/guess/main)
+
+main 2260742 2425993.799424:    1398893 cycles:u: 
+	          404398 II_SIMD+0x150 (/home/s2310764/guess/main)
+	          401fcc correct_test+0x7c0 (/home/s2310764/guess/main)
+	          401350 main+0xc (/home/s2310764/guess/main)
+	    ffff9058b000 [unknown] (/usr/lib64/libc.so.6)
+	    ffff9058b0d8 __libc_start_main+0x94 (/usr/lib64/libc.so.6)
+	          401270 _start+0x30 (/home/s2310764/guess/main)
+
+main 2260742 2425993.803173:    1402251 cycles:u: 
+	          404320 II_SIMD+0xd8 (/home/s2310764/guess/main)
+	          401fcc correct_test+0x7c0 (/home/s2310764/guess/main)
+	          401350 main+0xc (/home/s2310764/guess/main)
+	    ffff9058b000 [unknown] (/usr/lib64/libc.so.6)
+	    ffff9058b0d8 __libc_start_main+0x94 (/usr/lib64/libc.so.6)
+	          401270 _start+0x30 (/home/s2310764/guess/main)
+
+main 2260742 2425993.804132:    2372944 cycles:u: 
+	          404724 MD5Hash_SIMD+0x34c (/home/s2310764/guess/main)
+	          401fcc correct_test+0x7c0 (/home/s2310764/guess/main)
+	          401350 main+0xc (/home/s2310764/guess/main)
+	    ffff9058b000 [unknown] (/usr/lib64/libc.so.6)
+	    ffff9058b0d8 __libc_start_main+0x94 (/usr/lib64/libc.so.6)
+	          401270 _start+0x30 (/home/s2310764/guess/main)
+
+main 2260742 2425993.807571:    2392783 cycles:u: 
+	          404398 II_SIMD+0x150 (/home/s2310764/guess/main)
+	          401fcc correct_test+0x7c0 (/home/s2310764/guess/main)
+	          401350 main+0xc (/home/s2310764/guess/main)
+	    ffff9058b000 [unknown] (/usr/lib64/libc.so.6)
+	    ffff9058b0d8 __libc_start_main+0x94 (/usr/lib64/libc.so.6)
+	          401270 _start+0x30 (/home/s2310764/guess/main)
+
+main 2260742 2425993.808929:    3395507 cycles:u: 
+	          4045bc MD5Hash_SIMD+0x1e4 (/home/s2310764/guess/main)
+	          401fcc correct_test+0x7c0 (/home/s2310764/guess/main)
+	          401350 main+0xc (/home/s2310764/guess/main)
+	    ffff9058b000 [unknown] (/usr/lib64/libc.so.6)
+	    ffff9058b0d8 __libc_start_main+0x94 (/usr/lib64/libc.so.6)
+	          401270 _start+0x30 (/home/s2310764/guess/main)
+
+main 2260742 2425993.811969:    3464681 cycles:u: 
+	          403e18 FF_SIMD+0x90 (/home/s2310764/guess/main)
+	          401fcc correct_test+0x7c0 (/home/s2310764/guess/main)
+	          401350 main+0xc (/home/s2310764/guess/main)
+	    ffff9058b000 [unknown] (/usr/lib64/libc.so.6)
+	    ffff9058b0d8 __libc_start_main+0x94 (/usr/lib64/libc.so.6)
+	          401270 _start+0x30 (/home/s2310764/guess/main)
+
+main 2260742 2425993.813736:    4492686 cycles:u: 
+	          40419c HH_SIMD+0xbc (/home/s2310764/guess/main)
+	          401fcc correct_test+0x7c0 (/home/s2310764/guess/main)
+	          401350 main+0xc (/home/s2310764/guess/main)
+	    ffff9058b000 [unknown] (/usr/lib64/libc.so.6)
+	    ffff9058b0d8 __libc_start_main+0x94 (/usr/lib64/libc.so.6)
+	          401270 _start+0x30 (/home/s2310764/guess/main)
+
+main 2260742 2425993.816435:    4670131 cycles:u: 
+	          404060 GG_SIMD+0x12c (/home/s2310764/guess/main)
+	          401fcc correct_test+0x7c0 (/home/s2310764/guess/main)
+	          401350 main+0xc (/home/s2310764/guess/main)
+	    ffff9058b000 [unknown] (/usr/lib64/libc.so.6)
+	    ffff9058b0d8 __libc_start_main+0x94 (/usr/lib64/libc.so.6)
+	          401270 _start+0x30 (/home/s2310764/guess/main)
+
+main 2260742 2425993.818743:    5725927 cycles:u: 
+	          404180 HH_SIMD+0xa0 (/home/s2310764/guess/main)
+	          401fcc correct_test+0x7c0 (/home/s2310764/guess/main)
+	          401350 main+0xc (/home/s2310764/guess/main)
+	    ffff9058b000 [unknown] (/usr/lib64/libc.so.6)
+	    ffff9058b0d8 __libc_start_main+0x94 (/usr/lib64/libc.so.6)
+	          401270 _start+0x30 (/home/s2310764/guess/main)
+
