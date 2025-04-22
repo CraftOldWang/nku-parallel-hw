@@ -5,9 +5,11 @@
 #include "md5_avx.h"  // 需要创建这个新的头文件
 #include <iomanip>
 #include <immintrin.h> // AVX 指令集头文件
+#include <filesystem> // 添加文件系统库
 
 using namespace std;
 using namespace chrono;
+namespace fs = std::filesystem;
 
 int GENERATE_N = 10000000;
 int NUM_PER_HASH = 1000000;
@@ -53,6 +55,35 @@ int main()
                 cout << "Guess time:" << time_guess - time_hash << " seconds" << endl;
                 cout << "Hash time:" << time_hash << " seconds" << endl;
                 cout << "Train time:" << time_train << " seconds" << endl;
+
+
+                // 确保结果目录存在
+                if (!fs::exists("results")) {
+                    fs::create_directory("results");
+                }
+                
+                // 打开文件以附加模式写入结果
+                ofstream result_file("results/avx_result.txt", ios::app);
+                if (result_file.is_open()) {
+                    // 获取当前时间作为记录标识
+                    auto now = system_clock::now();
+                    auto now_time = system_clock::to_time_t(now);
+                    
+                    // 写入结果
+                    result_file << "--- 实验结果 [" << std::ctime(&now_time) << "] ---" << endl;
+                    result_file << "GENERATE_N: " << GENERATE_N << endl;
+                    result_file << "NUM_PER_HASH: " << NUM_PER_HASH << endl;
+                    result_file << "Guess time: " << (time_guess - time_hash) << " seconds" << endl;
+                    result_file << "Hash time: " << time_hash << " seconds" << endl;
+                    result_file << "Train time: " << time_train << " seconds" << endl;
+                    result_file << "Total time: " << time_guess << " seconds" << endl;
+                    result_file << "-----------------------------" << endl << endl;
+                    
+                    result_file.close();
+                    cout << "结果已保存到 results/avx_result.txt" << endl;
+                } else {
+                    cerr << "无法打开结果文件进行写入！" << endl;
+                }
                 break;
             }
         }

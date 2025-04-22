@@ -32,6 +32,12 @@ void MD5Hash_AVX(string *input, __m256i *state)
     state[2] = _mm256_set1_epi32(0x98badcfe);
     state[3] = _mm256_set1_epi32(0x10325476);
     
+    // 为已完成的字符串创建临时保存区
+    alignas(32) bit32 tmp_state0[8] = {0};
+    alignas(32) bit32 tmp_state1[8] = {0};
+    alignas(32) bit32 tmp_state2[8] = {0};
+    alignas(32) bit32 tmp_state3[8] = {0};
+    
     // 4. 主处理循环 - 逐块处理消息
     for (int i = 0; i < max_blocks; i++) {
         __m256i x[16]; // 16个消息块，每个包含8个并行处理的值
@@ -135,7 +141,32 @@ void MD5Hash_AVX(string *input, __m256i *state)
         state[1] = _mm256_add_epi32(state[1], b);
         state[2] = _mm256_add_epi32(state[2], c);
         state[3] = _mm256_add_epi32(state[3], d);
+        
+        // 保存已完成处理的字符串状态
+        // 检查每个字符串是否在当前块处理完成
+        alignas(32) bit32 state0_values[8], state1_values[8], state2_values[8], state3_values[8];
+        _mm256_store_si256((__m256i*)state0_values, state[0]);
+        _mm256_store_si256((__m256i*)state1_values, state[1]);
+        _mm256_store_si256((__m256i*)state2_values, state[2]);
+        _mm256_store_si256((__m256i*)state3_values, state[3]);
+        
+        // 检查每个字符串是否刚好在此块处理完成
+        for (int k = 0; k < 8; k++) {
+            if (i == blockCounts[k] - 1) {
+                // 该字符串处理完成，保存最终状态
+                tmp_state0[k] = state0_values[k];
+                tmp_state1[k] = state1_values[k];
+                tmp_state2[k] = state2_values[k];
+                tmp_state3[k] = state3_values[k];
+            }
+        }
     }
+    
+    // 将最终结果从临时保存区加载回状态向量
+    state[0] = _mm256_loadu_si256((__m256i*)tmp_state0);
+    state[1] = _mm256_loadu_si256((__m256i*)tmp_state1);
+    state[2] = _mm256_loadu_si256((__m256i*)tmp_state2);
+    state[3] = _mm256_loadu_si256((__m256i*)tmp_state3);
     
     // 5. 字节序转换 (little-endian to big-endian)
     // 使用AVX2的字节重排指令
