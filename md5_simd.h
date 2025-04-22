@@ -46,49 +46,80 @@ typedef unsigned int bit32;
 
 // 改写成内联函数; 不太看得懂，gpt说是在 .h 文件里写 static inline
 // 返回一个 bit32 x4 向量， 会有返回值优化对吧
-static inline uint32x4_t ROTATELEFT_SIMD(uint32x4_t& num, const int& n) {
-    return vorrq_u32( 
-      vshlq_n_u32(num, n), 
-      vshrq_n_u32(num, 32 - n)
-    );
-}
+// static inline uint32x4_t ROTATELEFT_SIMD(uint32x4_t& num, const int& n) {
+//     return vorrq_u32( 
+//       vshlq_n_u32(num, n), 
+//       vshrq_n_u32(num, 32 - n)
+//     );
+// }
 
 
 
-static inline void FF_SIMD(uint32x4_t& a, uint32x4_t& b, uint32x4_t& c, 
-                          uint32x4_t& d, uint32x4_t& x,const int& s, bit32 ac){
-  a = vaddq_u32(a, vaddq_u32(vaddq_u32(F_SIMD(b, c, d), x), vdupq_n_u32(ac))); 
-  a = ROTATELEFT_SIMD(a, s); 
-  a = vaddq_u32(a, b); 
-}
-
-
-static inline void GG_SIMD(uint32x4_t& a, uint32x4_t& b, uint32x4_t& c, 
-                          uint32x4_t& d, uint32x4_t& x,const int& s, bit32 ac){
-  a = vaddq_u32(a, vaddq_u32(vaddq_u32(G_SIMD(b, c, d), x), vdupq_n_u32(ac))); 
-  a = ROTATELEFT_SIMD(a, s); 
-  a = vaddq_u32(a, b); 
-}
-
-// static inline void HH_SIMD(uint32x4_t& a, uint32x4_t& b, uint32x4_t& c, 
+// static inline void FF_SIMD(uint32x4_t& a, uint32x4_t& b, uint32x4_t& c, 
 //                           uint32x4_t& d, uint32x4_t& x,const int& s, bit32 ac){
-//   a = vaddq_u32(a, vaddq_u32(vaddq_u32(H_SIMD(b, c, d), x), vdupq_n_u32(ac))); 
+//   a = vaddq_u32(a, vaddq_u32(vaddq_u32(F_SIMD(b, c, d), x), vdupq_n_u32(ac))); 
 //   a = ROTATELEFT_SIMD(a, s); 
 //   a = vaddq_u32(a, b); 
 // }
 
-static inline void HH_SIMD(uint32x4_t& a, uint32x4_t b, uint32x4_t c, 
-  uint32x4_t d, uint32x4_t x, const int s, bit32 ac) {
-a = vaddq_u32(a, vaddq_u32(vaddq_u32(H_SIMD(b, c, d), x), vdupq_n_u32(ac))); 
-a = ROTATELEFT_SIMD(a, s); 
-a = vaddq_u32(a, b); 
-}
 
-static inline void II_SIMD(uint32x4_t& a, uint32x4_t& b, uint32x4_t& c, 
-                          uint32x4_t& d, uint32x4_t& x,const int& s, bit32 ac){
-    a = vaddq_u32(a, vaddq_u32(vaddq_u32(I_SIMD(b, c, d), x), vdupq_n_u32(ac))); 
-    a = ROTATELEFT_SIMD(a, s); 
-    a = vaddq_u32(a, b); 
-}
+// static inline void GG_SIMD(uint32x4_t& a, uint32x4_t& b, uint32x4_t& c, 
+//                           uint32x4_t& d, uint32x4_t& x,const int& s, bit32 ac){
+//   a = vaddq_u32(a, vaddq_u32(vaddq_u32(G_SIMD(b, c, d), x), vdupq_n_u32(ac))); 
+//   a = ROTATELEFT_SIMD(a, s); 
+//   a = vaddq_u32(a, b); 
+// }
+
+// // static inline void HH_SIMD(uint32x4_t& a, uint32x4_t& b, uint32x4_t& c, 
+// //                           uint32x4_t& d, uint32x4_t& x,const int& s, bit32 ac){
+// //   a = vaddq_u32(a, vaddq_u32(vaddq_u32(H_SIMD(b, c, d), x), vdupq_n_u32(ac))); 
+// //   a = ROTATELEFT_SIMD(a, s); 
+// //   a = vaddq_u32(a, b); 
+// // }
+
+// static inline void HH_SIMD(uint32x4_t& a, uint32x4_t b, uint32x4_t c, 
+//   uint32x4_t d, uint32x4_t x, const int s, bit32 ac) {
+// a = vaddq_u32(a, vaddq_u32(vaddq_u32(H_SIMD(b, c, d), x), vdupq_n_u32(ac))); 
+// a = ROTATELEFT_SIMD(a, s); 
+// a = vaddq_u32(a, b); 
+// }
+
+// static inline void II_SIMD(uint32x4_t& a, uint32x4_t& b, uint32x4_t& c, 
+//                           uint32x4_t& d, uint32x4_t& x,const int& s, bit32 ac){
+//     a = vaddq_u32(a, vaddq_u32(vaddq_u32(I_SIMD(b, c, d), x), vdupq_n_u32(ac))); 
+//     a = ROTATELEFT_SIMD(a, s); 
+//     a = vaddq_u32(a, b); 
+// }
+
+
+#define ROTATELEFT_SIMD(num, n) \
+    vorrq_u32( \
+        vshlq_n_u32((num), (n)), \
+        vshrq_n_u32((num), 32 - (n)) \
+    )
+
+#define FF_SIMD(a, b, c, d, x, s, ac) do { \
+    (a) = vaddq_u32((a), vaddq_u32(vaddq_u32(F_SIMD((b), (c), (d)), (x)), vdupq_n_u32(ac))); \
+    (a) = ROTATELEFT_SIMD((a), (s)); \
+    (a) = vaddq_u32((a), (b)); \
+} while(0)
+
+#define GG_SIMD(a, b, c, d, x, s, ac) do { \
+    (a) = vaddq_u32((a), vaddq_u32(vaddq_u32(G_SIMD((b), (c), (d)), (x)), vdupq_n_u32(ac))); \
+    (a) = ROTATELEFT_SIMD((a), (s)); \
+    (a) = vaddq_u32((a), (b)); \
+} while(0)
+
+#define HH_SIMD(a, b, c, d, x, s, ac) do { \
+    (a) = vaddq_u32((a), vaddq_u32(vaddq_u32(H_SIMD((b), (c), (d)), (x)), vdupq_n_u32(ac))); \
+    (a) = ROTATELEFT_SIMD((a), (s)); \
+    (a) = vaddq_u32((a), (b)); \
+} while(0)
+
+#define II_SIMD(a, b, c, d, x, s, ac) do { \
+    (a) = vaddq_u32((a), vaddq_u32(vaddq_u32(I_SIMD((b), (c), (d)), (x)), vdupq_n_u32(ac))); \
+    (a) = ROTATELEFT_SIMD((a), (s)); \
+    (a) = vaddq_u32((a), (b)); \
+} while(0)
 
 void MD5Hash_SIMD(string *input,  uint32x4_t *state);
