@@ -205,11 +205,11 @@ void MD5Hash(string input, bit32 *state)
 	}
 
 	// 输出最终的hash结果
-	for (int i1 = 0; i1 < 4; i1 += 1)
-	{
-		cout << std::setw(8) << std::setfill('0') << hex << state[i1];
-	}
-	cout << endl;
+	// for (int i1 = 0; i1 < 4; i1 += 1)
+	// {
+	// 	cout << std::setw(8) << std::setfill('0') << hex << state[i1];
+	// }
+	// cout << endl;
 
 	// 释放动态分配的内存
 	// 实现SIMD并行算法的时候，也请记得及时回收内存！
