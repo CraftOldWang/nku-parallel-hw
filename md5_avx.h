@@ -2,7 +2,7 @@
 #include <iostream>
 #include <string>
 #include <cstring>
-#include <immintrin.h> // AVX指令集头文件
+#include <immintrin.h> 
 
 using namespace std;
 
