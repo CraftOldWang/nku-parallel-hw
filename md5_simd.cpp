@@ -211,22 +211,6 @@ void MD5Hash_SIMD(string &input1,string &input2, string & input3, string& input4
 
 	}
 
-	// state[0] = vld1q_u32(tmp_state0);
-	// state[1] = vld1q_u32(tmp_state1);
-	// state[2] = vld1q_u32(tmp_state2);
-	// state[3] = vld1q_u32(tmp_state3);
-
-
-	// 下面的处理，在理解上较为复杂
-	// for (int i = 0; i < 4; i++)
-	// {
-	// 	uint32_t value = state[i];
-	// 	state[i] = ((value & 0xff) << 24) |		 // 将最低字节移到最高位
-	// 			   ((value & 0xff00) << 8) |	 // 将次低字节左移
-	// 			   ((value & 0xff0000) >> 8) |	 // 将次高字节右移
-	// 			   ((value & 0xff000000) >> 24); // 将最高字节移到最低位
-	// }
-
 	#ifdef PERMUTATION_BYTE
 	// 小端序大端序转换
 	// 使用 NEON 指令一次性处理所有字节反转

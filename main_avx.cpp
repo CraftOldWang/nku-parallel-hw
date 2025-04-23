@@ -2,10 +2,10 @@
 #include <chrono>
 #include <fstream>
 #include "md5.h"
-#include "md5_avx.h"  // 需要创建这个新的头文件
+#include "md5_avx.h"  
 #include <iomanip>
-#include <immintrin.h> // AVX 指令集头文件
-#include <filesystem> // 添加文件系统库
+#include <immintrin.h> 
+#include <filesystem> 
 
 using namespace std;
 using namespace chrono;
