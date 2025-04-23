@@ -42,6 +42,15 @@ elif [[ "$VERSION" == "2" ]]; then
     )
     EXTRA_FLAGS="-mavx2"
     OUTPUT_FILE="main_avx"
+elif [[ "$VERSION" == "3" ]]; then
+    echo "🔧 编译：普通版本win"
+    CPP_FILES=(
+        main_win.cpp
+        train.cpp 
+        guessing.cpp 
+        md5.cpp
+    )
+    OUTPUT_FILE="main"
 else
     echo "❌ 无效的版本参数。请使用 0（普通）、1（SIMD）、2（AVX）"
     exit 1

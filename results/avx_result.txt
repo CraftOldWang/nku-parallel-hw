@@ -1,0 +1,20 @@
+--- 实验结果 [Tue Apr 22 20:03:01 2025
+] ---
+GENERATE_N: 10000000
+NUM_PER_HASH: 1000000
+Guess time: 0.401486 seconds
+Hash time: 0.194191 seconds
+Train time: 11.8645 seconds
+Total time: 0.595677 seconds
+-----------------------------
+
+--- 实验结果 [Tue Apr 22 20:03:42 2025
+] ---
+GENERATE_N: 10000000
+NUM_PER_HASH: 1000000
+Guess time: 0.417506 seconds
+Hash time: 0.172018 seconds
+Train time: 11.9969 seconds
+Total time: 0.589524 seconds
+-----------------------------
+

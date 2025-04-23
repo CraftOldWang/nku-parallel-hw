@@ -4,6 +4,7 @@
 #include <cstring>
 #include <iostream>
 
+// 可能有问题， 还没有改。。。
 // 外部函数声明
 extern Byte *StringProcess(string input, int *n_byte);
 
