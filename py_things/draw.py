@@ -53,7 +53,6 @@ def plot_hash_time(all_data):
     
     plt.xlabel('猜测上限 (Guess Limit)')
     plt.ylabel('Hash Time (秒)')
-    plt.title('Hash Time vs 猜测上限')
     plt.legend()
     plt.grid(True)
     plt.savefig('hash_time_plot.pdf', bbox_inches='tight')
@@ -85,8 +84,8 @@ def plot_speedup(all_data, baseline_file='scalar-O0'):
     
     plt.xlabel('猜测上限 (Guess Limit)')
     plt.ylabel(f'加速比 (相对于 {baseline_file})')
-    plt.title('加速比 vs 猜测上限')
-    plt.legend()
+    # 修改图例位置：固定在左上角
+    plt.legend(loc='upper left', bbox_to_anchor=(0.02, 0.5))
     plt.grid(True)
     plt.savefig('speedup_plot.pdf', bbox_inches='tight')
     plt.close()
@@ -118,7 +117,7 @@ def main():
     plot_hash_time(all_data)
 
     # 绘制加速比图（相对于 scalar-O0）
-    plot_speedup(all_data, baseline_file='scalar-O2')
+    plot_speedup(all_data, baseline_file='scalar_win-O2')
 
 if __name__ == "__main__":
     main()
