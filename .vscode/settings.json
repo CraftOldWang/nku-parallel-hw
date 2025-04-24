@@ -69,5 +69,7 @@
         "random": "cpp",
         "cassert": "cpp",
         "filesystem": "cpp"
-    }
+    },
+    "python-envs.defaultEnvManager": "ms-python.python:system",
+    "python-envs.pythonProjects": []
 }
