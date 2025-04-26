@@ -117,7 +117,7 @@ def main():
     plot_hash_time(all_data)
 
     # 绘制加速比图（相对于 scalar-O0）
-    plot_speedup(all_data, baseline_file='scalar_win-O2')
+    plot_speedup(all_data, baseline_file='SIMD-O2inline')
 
 if __name__ == "__main__":
     main()
