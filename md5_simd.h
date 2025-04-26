@@ -3,6 +3,8 @@
 #include <string>
 #include <cstring>
 #include <arm_neon.h>
+#include "config.h"
+
 
 using namespace std;
 
@@ -12,6 +14,9 @@ using namespace std;
 typedef unsigned char Byte;
 // 定义了32比特
 typedef unsigned int bit32;
+
+// #define NOT_USING_STRING_ARR // 使用 单个字符串传参
+// #define USING_ALIGNED   // 不过这里也没用到。。。。
 
 // MD5的一系列参数。参数是固定的，其实你不需要看懂这些
 #define s11 7
@@ -122,4 +127,12 @@ typedef unsigned int bit32;
     (a) = vaddq_u32((a), (b)); \
 }
 
+
+
+#ifdef NOT_USING_STRING_ARR
 void MD5Hash_SIMD(string &input1,string &input2, string & input3, string& input4,  uint32x4_t *state);
+#endif
+
+#ifndef NOT_USING_STRING_ARR
+void MD5Hash_SIMD(string *input,  uint32x4_t *state);
+#endif
