@@ -92,7 +92,7 @@ Byte *StringProcess(string input, int *n_byte)
  * @param[out] state 用于给调用者传递额外的返回值，即最终的缓冲区，也就是MD5的结果
  * @return Byte消息数组
  */
-void MD5Hash_SIMD(string *input, uint32x4_t *state)
+void MD5Hash_SIMD_mask(string *input, uint32x4_t *state)
 {
 
 	Byte **paddedMessages = new Byte*[4];
