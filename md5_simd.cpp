@@ -2,16 +2,26 @@
 #include <iomanip>
 #include <assert.h>
 #include <chrono>
+
 #include "md5.h" // 为了在correct_test.cpp里防止 StringProcess 多次定义..
+#include "config.h"
+
 
 using namespace std;
 using namespace chrono;
+
+
+// #define NOT_USING_STRING_ARR     // 使用 单个字符串传参
+// #define USING_ALIGNED      //  使用 内存对齐  ； 这两个选项开启之后都是正优化。
+
+
 
 #define ROUND_OPERATION
 #define PERMUTATION_BYTE
 #define TEMP_MASKING // 这个masking 占用的时间似乎很少....  主要还是 ROUND_OPERATION 占用了1s左右的时间吧。
 #define SUM_TO_STATE
 #define LOAD_BLOCK
+
 
 const int BATCH_SIZE = 4;
 extern Byte *StringProcess(string input, int *n_byte); // 结果整得好麻烦。因为重名了
@@ -23,13 +33,35 @@ extern Byte *StringProcess(string input, int *n_byte); // 结果整得好麻烦�
  * @param[out] state 用于给调用者传递额外的返回值，即最终的缓冲区，也就是MD5的结果
  * @return Byte消息数组
  */
-void MD5Hash_SIMD(string &input1,string &input2, string & input3, string& input4, uint32x4_t *state)
+
+#ifndef NOT_USING_STRING_ARR
+void MD5Hash_SIMD(string *input, uint32x4_t *state)
 {
 
 	Byte **paddedMessages = new Byte*[4];
 	int *messageLength = new int[4];
 	int *blockCounts = new int[4];
 
+
+	paddedMessages[0] = StringProcess(input[0], &messageLength[0]);
+	blockCounts[0] = messageLength[0] / 64;
+	paddedMessages[1] = StringProcess(input[1], &messageLength[1]);
+	blockCounts[1] = messageLength[1] / 64;
+	paddedMessages[2] = StringProcess(input[2], &messageLength[2]);
+	blockCounts[2] = messageLength[2] / 64;
+	paddedMessages[3] = StringProcess(input[3], &messageLength[3]);
+	blockCounts[3] = messageLength[3] / 64;
+		// cout<<messageLength[i]<<endl;
+		// assert(messageLength[i] == messageLength[0]);
+#endif
+
+#ifdef NOT_USING_STRING_ARR
+void MD5Hash_SIMD(string &input1,string &input2, string & input3, string& input4, uint32x4_t *state)
+{
+
+	Byte **paddedMessages = new Byte*[4];
+	int *messageLength = new int[4];
+	int *blockCounts = new int[4];
 
 	paddedMessages[0] = StringProcess(input1, &messageLength[0]);
 	blockCounts[0] = messageLength[0] / 64;
@@ -39,9 +71,7 @@ void MD5Hash_SIMD(string &input1,string &input2, string & input3, string& input4
 	blockCounts[2] = messageLength[2] / 64;
 	paddedMessages[3] = StringProcess(input4, &messageLength[3]);
 	blockCounts[3] = messageLength[3] / 64;
-		// cout<<messageLength[i]<<endl;
-		// assert(messageLength[i] == messageLength[0]);
-	
+#endif
 
     // 2. 找到最长的块数
     int max_blocks = 0;
@@ -57,10 +87,18 @@ void MD5Hash_SIMD(string &input1,string &input2, string & input3, string& input4
     state[3] = vdupq_n_u32(0x10325476);  
 
 	#ifdef TEMP_MASKING
+	#ifdef USING_ALIGNED
 	alignas(16) bit32 tmp_state0[4];
 	alignas(16) bit32 tmp_state1[4];
 	alignas(16) bit32 tmp_state2[4];
 	alignas(16) bit32 tmp_state3[4];
+	#endif
+	#ifndef USING_ALIGNED
+	bit32 tmp_state0[4];
+	bit32 tmp_state1[4];
+	bit32 tmp_state2[4];
+	bit32 tmp_state3[4];
+	#endif
 	#endif
 
 	// 逐block地更新state
@@ -95,8 +133,12 @@ void MD5Hash_SIMD(string &input1,string &input2, string & input3, string& input4
 		#endif
 
 		// bit32 a = state[0], b = state[1], c = state[2], d = state[3];
+		#ifdef USING_ALIGNED
         alignas(16) uint32x4_t a = state[0],  b = state[1], c = state[2], d = state[3];
-
+		#endif
+		#ifndef USING_ALIGNED
+		uint32x4_t a = state[0],  b = state[1], c = state[2], d = state[3];
+		#endif
 		auto start = system_clock::now();
 
 		#ifdef ROUND_OPERATION
@@ -214,10 +256,18 @@ void MD5Hash_SIMD(string &input1,string &input2, string & input3, string& input4
 	#ifdef PERMUTATION_BYTE
 	// 小端序大端序转换
 	// 使用 NEON 指令一次性处理所有字节反转
+	// #ifdef USING_ALIGNED
+	// alignas(16) uint8x16_t bytes0 = vreinterpretq_u8_u32(state[0]);
+	// alignas(16) uint8x16_t bytes1 = vreinterpretq_u8_u32(state[1]);
+	// alignas(16) uint8x16_t bytes2 = vreinterpretq_u8_u32(state[2]);
+	// alignas(16) uint8x16_t bytes3 = vreinterpretq_u8_u32(state[3]);
+	// #endif
+	// #ifndef USING_ALIGNED
 	uint8x16_t bytes0 = vreinterpretq_u8_u32(state[0]);
 	uint8x16_t bytes1 = vreinterpretq_u8_u32(state[1]);
 	uint8x16_t bytes2 = vreinterpretq_u8_u32(state[2]);
 	uint8x16_t bytes3 = vreinterpretq_u8_u32(state[3]);
+	// #endif
 	// vrev32q_u8 指令实现 32 位内的字节反转
 	bytes0 = vrev32q_u8(bytes0);
 	bytes1 = vrev32q_u8(bytes1);
