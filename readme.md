@@ -40,3 +40,5 @@ SIMD 版本hash 51s  正常版本 9s； 可能 用宏函数会更快？？
 不是宏函数的问题， 把串行版本 换成 inline函数，并没有变慢。 (见md5_part_no_macro .h .cpp)
  
 总算弄完了,果然还是用宏定义方便，不需要开那么多文件;文件一多就显得很乱。
+
+使用 `./sub.sh simd -O2` 提交运行 simd 的实验,开启-O2优化。 normal 、avx 、test 运行其他的。
