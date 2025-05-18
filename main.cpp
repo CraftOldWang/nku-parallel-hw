@@ -48,12 +48,22 @@ int main()
     // 添加时间戳
     auto now = system_clock::now();
     auto now_time = system_clock::to_time_t(now);
+
+#ifdef _WIN32
+    cout << "\n--- WIN 标准 MD5 实验批次 [" << std::ctime(&now_time) << "] ---\n";
+#else
     cout << "\n--- 标准 MD5 实验批次 [" << std::ctime(&now_time) << "] ---\n";
+#endif
     
     // 训练模型（只需一次）
     PriorityQueue q;
     auto start_train = system_clock::now();
+// 将windows下用的main.cpp合并进来了
+#ifdef _WIN32
+    q.m.train(".\\guessdata\\small_Rockyou-singleLined-full.txt");
+#else
     q.m.train("/guessdata/Rockyou-singleLined-full.txt");
+#endif
     q.m.order();
     auto end_train = system_clock::now();
     auto duration_train = duration_cast<microseconds>(end_train - start_train);
