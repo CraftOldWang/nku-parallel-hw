@@ -8,6 +8,8 @@ using namespace chrono;
 
 const int BATCH_SIZE = 4;
 
+// 废弃，最终没做
+
 //TODO grok  说 口令 预处理成的块 数量不同， 可以使用掩码来进行每次的更新
 // Claude 也说可以使用掩码， 还有什么位掩码  
 // 		方案 1：使用完成掩码保存结果（推荐）
