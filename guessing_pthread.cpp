@@ -2,6 +2,65 @@
 #include <pthread.h> //FIXME 在这里还是 PCFG.h 里加比较好？ 
 using namespace std;
 
+struct ThreadArgs {
+    vector<string>* result_vec;   // 存储生成的猜测字符串
+    int* counter;                 // 计数器
+    segment* seg;                 // 指向segment的指针
+    string prefix;                // 前缀 (对于多segment情况)
+    int start_idx;                // 起始索引
+    int end_idx;                  // 结束索引
+    pthread_mutex_t* mutex;       // 互斥锁
+};
+
+void* single_segment_worker(void* arg);
+void* multi_segment_worker(void* arg);
+pthread_mutex_t guess_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+// 处理单segment
+void* single_segment_worker(void* arg) {
+    ThreadArgs* args = (ThreadArgs*)arg;
+    
+    vector<string> local_guesses;
+    int local_count = 0;
+    
+    local_guesses.reserve(args->end_idx - args->start_idx);
+    
+    for (int i = args->start_idx; i < args->end_idx; i++) {
+        local_guesses.push_back(args->seg->ordered_values[i]);
+        local_count++;
+    }
+    
+    pthread_mutex_lock(args->mutex);
+    args->result_vec->insert(args->result_vec->end(), local_guesses.begin(), local_guesses.end());
+    *(args->counter) += local_count;
+    pthread_mutex_unlock(args->mutex);
+    
+    return NULL;
+}
+
+// 处理多segment
+void* multi_segment_worker(void* arg) {
+    ThreadArgs* args = (ThreadArgs*)arg;
+    
+    vector<string> local_guesses;
+    int local_count = 0;
+    
+    local_guesses.reserve(args->end_idx - args->start_idx);
+    
+    for (int i = args->start_idx; i < args->end_idx; i++) {
+        local_guesses.push_back(args->prefix + args->seg->ordered_values[i]);
+        local_count++;
+    }
+    
+    pthread_mutex_lock(args->mutex);
+    args->result_vec->insert(args->result_vec->end(), local_guesses.begin(), local_guesses.end());
+    *(args->counter) += local_count;
+    pthread_mutex_unlock(args->mutex);
+    
+    return NULL;
+}
+
+
 void PriorityQueue::CalProb(PT &pt)
 {
     // 计算PriorityQueue里面一个PT的流程如下：
@@ -53,6 +112,13 @@ void PriorityQueue::CalProb(PT &pt)
 
 void PriorityQueue::init()
 {
+    //BUGFIX 疑似没有清空？
+    //BUGFIX测试发现， 真的没有清空啊
+    //于是先清空一下
+    // 不然由于没清空上次实验的PT，导致前面使用的PT，大多都是概率小，可能对应的value数也少？总之可能有影响
+    priority.clear();
+
+
     // cout << m.ordered_pts.size() << endl;
     // 用所有可能的PT，按概率降序填满整个优先队列
     for (PT pt : m.ordered_pts)
@@ -185,6 +251,9 @@ void PriorityQueue::Generate(PT pt)
     // 计算PT的概率，这里主要是给PT的概率进行初始化
     CalProb(pt);
 
+    // 设置线程数 - 可以根据系统核心数调整
+    const int NUM_THREADS = 4;  
+
     // 对于只有一个segment的PT，直接遍历生成其中的所有value即可
     if (pt.content.size() == 1)
     {
@@ -208,13 +277,49 @@ void PriorityQueue::Generate(PT pt)
         // 这个for循环就是你需要进行并行化的主要部分了，特别是在多线程&GPU编程任务中
         // 可以看到，这个循环本质上就是把模型中一个segment的所有value，赋值到PT中，形成一系列新的猜测
         // 这个过程是可以高度并行化的
-        for (int i = 0; i < pt.max_indices[0]; i += 1)
-        {
-            string guess = a->ordered_values[i];
-            // cout << guess << endl;
-            guesses.emplace_back(guess);
-            total_guesses += 1;
+        // for (int i = 0; i < pt.max_indices[0]; i += 1)
+        // {
+        //     string guess = a->ordered_values[i];
+        //     // cout << guess << endl;
+        //     guesses.emplace_back(guess);
+        //     total_guesses += 1;
+        // }
+
+        // 创建线程
+        pthread_t threads[NUM_THREADS];
+        ThreadArgs args[NUM_THREADS];
+        
+        // 计算每个线程的工作量
+        int total_values = pt.max_indices[0];
+        int values_per_thread = total_values / NUM_THREADS;
+        int remainder = total_values % NUM_THREADS;
+        
+        // 创建并启动线程
+        for (int i = 0; i < NUM_THREADS; i++) {
+            args[i].result_vec = &guesses;
+            args[i].counter = &total_guesses;
+            args[i].seg = a;
+            args[i].mutex = &guess_mutex;
+            args[i].start_idx = i * values_per_thread + min(i, remainder);
+            args[i].end_idx = (i + 1) * values_per_thread + min(i + 1, remainder);
+            
+            // 仅在有工作要做时创建线程
+            if (args[i].start_idx < args[i].end_idx) {
+                if (pthread_create(&threads[i], NULL, single_segment_worker, (void*)&args[i]) != 0) {
+                    // 如果创建线程失败，回退到串行处理
+                    cout << "Error in creating thread in size() == 1" << i << endl;
+                    throw "Error in creating thread";
+                }
+            }
         }
+        // 等待所有线程完成
+        for (int i = 0; i < NUM_THREADS; i++) {
+            if (args[i].start_idx < args[i].end_idx) {
+                pthread_join(threads[i], NULL);
+            }
+        }
+
+
     }
     else
     {
@@ -263,12 +368,49 @@ void PriorityQueue::Generate(PT pt)
         // 这个for循环就是你需要进行并行化的主要部分了，特别是在多线程&GPU编程任务中
         // 可以看到，这个循环本质上就是把模型中一个segment的所有value，赋值到PT中，形成一系列新的猜测
         // 这个过程是可以高度并行化的
-        for (int i = 0; i < pt.max_indices[pt.content.size() - 1]; i += 1)
-        {
-            string temp = guess + a->ordered_values[i];
-            // cout << temp << endl;
-            guesses.emplace_back(temp);
-            total_guesses += 1;
+        // for (int i = 0; i < pt.max_indices[pt.content.size() - 1]; i += 1)
+        // {
+        //     string temp = guess + a->ordered_values[i];
+        //     // cout << temp << endl;
+        //     guesses.emplace_back(temp);
+        //     total_guesses += 1;
+        // }
+
+
+        // 创建线程
+        pthread_t threads[NUM_THREADS];
+        ThreadArgs args[NUM_THREADS];
+        
+        // 计算每个线程的工作量
+        int total_values = pt.max_indices[pt.content.size() - 1];
+        int values_per_thread = total_values / NUM_THREADS;
+        int remainder = total_values % NUM_THREADS;
+        
+        // 创建并启动线程
+        for (int i = 0; i < NUM_THREADS; i++) {
+            args[i].result_vec = &guesses;
+            args[i].counter = &total_guesses;
+            args[i].seg = a;
+            args[i].prefix = guess;
+            args[i].mutex = &guess_mutex;
+            args[i].start_idx = i * values_per_thread + min(i, remainder);
+            args[i].end_idx = (i + 1) * values_per_thread + min(i + 1, remainder);
+            
+            // 仅在有工作要做时创建线程
+            if (args[i].start_idx < args[i].end_idx) {
+                if (pthread_create(&threads[i], NULL, multi_segment_worker, (void*)&args[i]) != 0) {
+                    cout << "Error in creating thread in size() != 1" << i << endl;
+                    throw "Error in creating thread";
+                }
+            }
+        }
+        
+        // 等待所有线程完成
+        for (int i = 0; i < NUM_THREADS; i++) {
+            // 等待创建了的线程join
+            if (args[i].start_idx < args[i].end_idx) {
+                pthread_join(threads[i], NULL);
+            }
         }
     }
 }

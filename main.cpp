@@ -85,6 +85,8 @@ int main()
         
         // 重置队列
         q.init();
+        q.guesses.clear();
+
         
         double time_hash = 0;  // 用于MD5哈希的时间
         double time_guess = 0; // 哈希和猜测的总时长
