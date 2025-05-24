@@ -68,7 +68,8 @@
         "xutility": "cpp",
         "random": "cpp",
         "cassert": "cpp",
-        "filesystem": "cpp"
+        "filesystem": "cpp",
+        "unordered_set": "cpp"
     },
     "python-envs.defaultEnvManager": "ms-python.python:system",
     "python-envs.pythonProjects": []
