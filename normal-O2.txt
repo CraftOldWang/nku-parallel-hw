@@ -599,7 +599,7 @@ Guesses generated: 9853408
 一次生成了2090个猜测
 一次生成了170685个猜测
 Guesses generated: 10106852
-Guess time:0.390156seconds
-Hash time:6.72093seconds
-Train time:11.667seconds
+Guess time:0.386446seconds
+Hash time:6.90508seconds
+Train time:12.0069seconds
 Cracked:358217

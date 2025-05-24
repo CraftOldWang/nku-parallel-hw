@@ -7,6 +7,8 @@
 using namespace std;
 using namespace chrono;
 
+// #define USING_SMALL
+
 // 编译指令如下
 // g++ main.cpp train.cpp guessing.cpp md5.cpp -o main
 // g++ main.cpp train.cpp guessing.cpp md5.cpp -o main -O1
@@ -20,7 +22,11 @@ int main()
     PriorityQueue q;
     auto start_train = system_clock::now();
 #ifdef _WIN32
+    #ifdef USING_SMALL
     q.m.train(".\\guessdata\\small_Rockyou-singleLined-full.txt");
+    #else
+    q.m.train(".\\guessdata\\Rockyou-singleLined-full.txt");
+    #endif
 #else
     q.m.train("/guessdata/Rockyou-singleLined-full.txt");
 #endif
@@ -34,7 +40,11 @@ int main()
     // 加载一些测试数据
     unordered_set<std::string> test_set;
 #ifdef _WIN32
+    #ifdef USING_SMALL
     ifstream test_data(".\\guessdata\\small_Rockyou-singleLined-full.txt");
+    #else
+    ifstream test_data(".\\guessdata\\Rockyou-singleLined-full.txt");
+    #endif
 #else
     ifstream test_data("/guessdata/Rockyou-singleLined-full.txt");
 #endif

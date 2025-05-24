@@ -14,25 +14,22 @@ struct ThreadArgs {
 
 void* single_segment_worker(void* arg);
 void* multi_segment_worker(void* arg);
+pthread_mutex_t guess_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-// 处理单segment的线程函数
+// 处理单segment
 void* single_segment_worker(void* arg) {
     ThreadArgs* args = (ThreadArgs*)arg;
     
-    // 创建本地向量以减少锁争用
     vector<string> local_guesses;
     int local_count = 0;
     
-    // 预分配空间以减少内存分配
     local_guesses.reserve(args->end_idx - args->start_idx);
     
-    // 处理分配的索引范围
     for (int i = args->start_idx; i < args->end_idx; i++) {
         local_guesses.push_back(args->seg->ordered_values[i]);
         local_count++;
     }
     
-    // 批量添加到共享结果向量
     pthread_mutex_lock(args->mutex);
     args->result_vec->insert(args->result_vec->end(), local_guesses.begin(), local_guesses.end());
     *(args->counter) += local_count;
@@ -41,24 +38,20 @@ void* single_segment_worker(void* arg) {
     return NULL;
 }
 
-// 处理多segment的线程函数
+// 处理多segment
 void* multi_segment_worker(void* arg) {
     ThreadArgs* args = (ThreadArgs*)arg;
     
-    // 创建本地向量以减少锁争用
     vector<string> local_guesses;
     int local_count = 0;
     
-    // 预分配空间以减少内存分配
     local_guesses.reserve(args->end_idx - args->start_idx);
     
-    // 处理分配的索引范围
     for (int i = args->start_idx; i < args->end_idx; i++) {
         local_guesses.push_back(args->prefix + args->seg->ordered_values[i]);
         local_count++;
     }
     
-    // 批量添加到共享结果向量
     pthread_mutex_lock(args->mutex);
     args->result_vec->insert(args->result_vec->end(), local_guesses.begin(), local_guesses.end());
     *(args->counter) += local_count;
@@ -251,6 +244,9 @@ void PriorityQueue::Generate(PT pt)
     // 计算PT的概率，这里主要是给PT的概率进行初始化
     CalProb(pt);
 
+    // 设置线程数 - 可以根据系统核心数调整
+    const int NUM_THREADS = 4;  
+
     // 对于只有一个segment的PT，直接遍历生成其中的所有value即可
     if (pt.content.size() == 1)
     {
@@ -274,13 +270,49 @@ void PriorityQueue::Generate(PT pt)
         // 这个for循环就是你需要进行并行化的主要部分了，特别是在多线程&GPU编程任务中
         // 可以看到，这个循环本质上就是把模型中一个segment的所有value，赋值到PT中，形成一系列新的猜测
         // 这个过程是可以高度并行化的
-        for (int i = 0; i < pt.max_indices[0]; i += 1)
-        {
-            string guess = a->ordered_values[i];
-            // cout << guess << endl;
-            guesses.emplace_back(guess);
-            total_guesses += 1;
+        // for (int i = 0; i < pt.max_indices[0]; i += 1)
+        // {
+        //     string guess = a->ordered_values[i];
+        //     // cout << guess << endl;
+        //     guesses.emplace_back(guess);
+        //     total_guesses += 1;
+        // }
+
+        // 创建线程
+        pthread_t threads[NUM_THREADS];
+        ThreadArgs args[NUM_THREADS];
+        
+        // 计算每个线程的工作量
+        int total_values = pt.max_indices[0];
+        int values_per_thread = total_values / NUM_THREADS;
+        int remainder = total_values % NUM_THREADS;
+        
+        // 创建并启动线程
+        for (int i = 0; i < NUM_THREADS; i++) {
+            args[i].result_vec = &guesses;
+            args[i].counter = &total_guesses;
+            args[i].seg = a;
+            args[i].mutex = &guess_mutex;
+            args[i].start_idx = i * values_per_thread + min(i, remainder);
+            args[i].end_idx = (i + 1) * values_per_thread + min(i + 1, remainder);
+            
+            // 仅在有工作要做时创建线程
+            if (args[i].start_idx < args[i].end_idx) {
+                if (pthread_create(&threads[i], NULL, single_segment_worker, (void*)&args[i]) != 0) {
+                    // 如果创建线程失败，回退到串行处理
+                    cout << "Error in creating thread in size() == 1" << i << endl;
+                    throw "Error in creating thread";
+                }
+            }
         }
+        // 等待所有线程完成
+        for (int i = 0; i < NUM_THREADS; i++) {
+            if (args[i].start_idx < args[i].end_idx) {
+                pthread_join(threads[i], NULL);
+            }
+        }
+
+
     }
     else
     {
@@ -329,12 +361,49 @@ void PriorityQueue::Generate(PT pt)
         // 这个for循环就是你需要进行并行化的主要部分了，特别是在多线程&GPU编程任务中
         // 可以看到，这个循环本质上就是把模型中一个segment的所有value，赋值到PT中，形成一系列新的猜测
         // 这个过程是可以高度并行化的
-        for (int i = 0; i < pt.max_indices[pt.content.size() - 1]; i += 1)
-        {
-            string temp = guess + a->ordered_values[i];
-            // cout << temp << endl;
-            guesses.emplace_back(temp);
-            total_guesses += 1;
+        // for (int i = 0; i < pt.max_indices[pt.content.size() - 1]; i += 1)
+        // {
+        //     string temp = guess + a->ordered_values[i];
+        //     // cout << temp << endl;
+        //     guesses.emplace_back(temp);
+        //     total_guesses += 1;
+        // }
+
+
+        // 创建线程
+        pthread_t threads[NUM_THREADS];
+        ThreadArgs args[NUM_THREADS];
+        
+        // 计算每个线程的工作量
+        int total_values = pt.max_indices[pt.content.size() - 1];
+        int values_per_thread = total_values / NUM_THREADS;
+        int remainder = total_values % NUM_THREADS;
+        
+        // 创建并启动线程
+        for (int i = 0; i < NUM_THREADS; i++) {
+            args[i].result_vec = &guesses;
+            args[i].counter = &total_guesses;
+            args[i].seg = a;
+            args[i].prefix = guess;
+            args[i].mutex = &guess_mutex;
+            args[i].start_idx = i * values_per_thread + min(i, remainder);
+            args[i].end_idx = (i + 1) * values_per_thread + min(i + 1, remainder);
+            
+            // 仅在有工作要做时创建线程
+            if (args[i].start_idx < args[i].end_idx) {
+                if (pthread_create(&threads[i], NULL, multi_segment_worker, (void*)&args[i]) != 0) {
+                    cout << "Error in creating thread in size() != 1" << i << endl;
+                    throw "Error in creating thread";
+                }
+            }
+        }
+        
+        // 等待所有线程完成
+        for (int i = 0; i < NUM_THREADS; i++) {
+            // 等待创建了的线程join
+            if (args[i].start_idx < args[i].end_idx) {
+                pthread_join(threads[i], NULL);
+            }
         }
     }
 }
