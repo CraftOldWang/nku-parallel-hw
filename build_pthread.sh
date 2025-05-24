@@ -24,11 +24,12 @@ if [[ "$VERSION" == "0" ]]; then
 elif [[ "$VERSION" == "1" ]]; then
     echo "🔧 编译：pthread 动态线程版本？？"
     CPP_FILES=(
-        correctness_guess.cpp.cpp
+        main.cpp
         md5.cpp
-        guessing.cpp
+        guessing_pthread.cpp
         train.cpp
     )
+    EXTRA_FLAGS= "-pthread"
     OUTPUT_FILE="main"
 elif [[ "$VERSION" == "2" ]]; then
     echo "🔧 编译：pthread 静态线程？？//注意后面可能需要结合simd , 以及要搞openmp"
