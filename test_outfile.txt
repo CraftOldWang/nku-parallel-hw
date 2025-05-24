@@ -1,0 +1,101 @@
+Training...
+Training phase 1: reading and parsing passwords...
+Training phase 2: Ordering segment values and PTs...
+total pts7417
+Ordering letters
+Ordering digits
+ordering symbols
+here
+Guesses generated: 128114
+Guesses generated: 239206
+Guesses generated: 342073
+Guesses generated: 444118
+Guesses generated: 546361
+Guesses generated: 647272
+Guesses generated: 763799
+Guesses generated: 864456
+Guesses generated: 995888
+Guesses generated: 1095893
+Guesses generated: 1226769
+Guesses generated: 1332601
+Guesses generated: 1453016
+Guesses generated: 1568672
+Guesses generated: 1672844
+Guesses generated: 1786400
+Guesses generated: 1889464
+Guesses generated: 1991399
+Guesses generated: 2124880
+Guesses generated: 2226039
+Guesses generated: 2335334
+Guesses generated: 2464983
+Guesses generated: 2571597
+Guesses generated: 2676263
+Guesses generated: 2809991
+Guesses generated: 2940363
+Guesses generated: 3041531
+Guesses generated: 3163940
+Guesses generated: 3279517
+Guesses generated: 3401355
+Guesses generated: 3524773
+Guesses generated: 3643020
+Guesses generated: 3769995
+Guesses generated: 3883338
+Guesses generated: 3983813
+Guesses generated: 4102968
+Guesses generated: 4211690
+Guesses generated: 4319081
+Guesses generated: 4431731
+Guesses generated: 4553680
+Guesses generated: 4660354
+Guesses generated: 4771732
+Guesses generated: 4885239
+Guesses generated: 5020503
+Guesses generated: 5138913
+Guesses generated: 5239765
+Guesses generated: 5356043
+Guesses generated: 5484367
+Guesses generated: 5596945
+Guesses generated: 5715660
+Guesses generated: 5821012
+Guesses generated: 5923949
+Guesses generated: 6030922
+Guesses generated: 6133524
+Guesses generated: 6237525
+Guesses generated: 6353965
+Guesses generated: 6477081
+Guesses generated: 6606094
+Guesses generated: 6706930
+Guesses generated: 6809184
+Guesses generated: 6925712
+Guesses generated: 7034756
+Guesses generated: 7149420
+Guesses generated: 7254894
+Guesses generated: 7360493
+Guesses generated: 7460722
+Guesses generated: 7584715
+Guesses generated: 7686335
+Guesses generated: 7791384
+Guesses generated: 7900643
+Guesses generated: 8028747
+Guesses generated: 8129737
+Guesses generated: 8245711
+Guesses generated: 8351306
+Guesses generated: 8464781
+Guesses generated: 8590763
+Guesses generated: 8692761
+Guesses generated: 8799092
+Guesses generated: 8906910
+Guesses generated: 9028095
+Guesses generated: 9137679
+Guesses generated: 9253490
+Guesses generated: 9358674
+Guesses generated: 9508181
+Guesses generated: 9609562
+Guesses generated: 9710357
+Guesses generated: 9812638
+Guesses generated: 9914578
+Guesses generated: 10035165
+Guess time:0.389313seconds
+Hash time:5.69318seconds
+Train time:1.99347seconds
+Cracked:244833

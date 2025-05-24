@@ -2,6 +2,72 @@
 #include <pthread.h> //FIXME 在这里还是 PCFG.h 里加比较好？ 
 using namespace std;
 
+struct ThreadArgs {
+    vector<string>* result_vec;   // 存储生成的猜测字符串
+    int* counter;                 // 计数器
+    segment* seg;                 // 指向segment的指针
+    string prefix;                // 前缀 (对于多segment情况)
+    int start_idx;                // 起始索引
+    int end_idx;                  // 结束索引
+    pthread_mutex_t* mutex;       // 互斥锁
+};
+
+void* single_segment_worker(void* arg);
+void* multi_segment_worker(void* arg);
+
+// 处理单segment的线程函数
+void* single_segment_worker(void* arg) {
+    ThreadArgs* args = (ThreadArgs*)arg;
+    
+    // 创建本地向量以减少锁争用
+    vector<string> local_guesses;
+    int local_count = 0;
+    
+    // 预分配空间以减少内存分配
+    local_guesses.reserve(args->end_idx - args->start_idx);
+    
+    // 处理分配的索引范围
+    for (int i = args->start_idx; i < args->end_idx; i++) {
+        local_guesses.push_back(args->seg->ordered_values[i]);
+        local_count++;
+    }
+    
+    // 批量添加到共享结果向量
+    pthread_mutex_lock(args->mutex);
+    args->result_vec->insert(args->result_vec->end(), local_guesses.begin(), local_guesses.end());
+    *(args->counter) += local_count;
+    pthread_mutex_unlock(args->mutex);
+    
+    return NULL;
+}
+
+// 处理多segment的线程函数
+void* multi_segment_worker(void* arg) {
+    ThreadArgs* args = (ThreadArgs*)arg;
+    
+    // 创建本地向量以减少锁争用
+    vector<string> local_guesses;
+    int local_count = 0;
+    
+    // 预分配空间以减少内存分配
+    local_guesses.reserve(args->end_idx - args->start_idx);
+    
+    // 处理分配的索引范围
+    for (int i = args->start_idx; i < args->end_idx; i++) {
+        local_guesses.push_back(args->prefix + args->seg->ordered_values[i]);
+        local_count++;
+    }
+    
+    // 批量添加到共享结果向量
+    pthread_mutex_lock(args->mutex);
+    args->result_vec->insert(args->result_vec->end(), local_guesses.begin(), local_guesses.end());
+    *(args->counter) += local_count;
+    pthread_mutex_unlock(args->mutex);
+    
+    return NULL;
+}
+
+
 void PriorityQueue::CalProb(PT &pt)
 {
     // 计算PriorityQueue里面一个PT的流程如下：
