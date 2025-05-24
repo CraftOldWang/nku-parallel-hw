@@ -15,7 +15,7 @@ shift  # 移除第一个参数，保留后续参数作为编译选项
 if [[ "$VERSION" == "0" ]]; then
     echo "🔧 编译：普通版本"
     CPP_FILES=(
-        correctness_guess.cpp
+        main.cpp
         train.cpp 
         guessing.cpp 
         md5.cpp
@@ -40,6 +40,16 @@ elif [[ "$VERSION" == "2" ]]; then
         # md5.cpp
     )
     OUTPUT_FILE="main"
+elif [[ "$VERSION" == "3" ]]; then
+    echo "🔧 编译：openmp"
+    CPP_FILES=(
+        correctness_guess.cpp
+        md5.cpp
+        guessing_openmp.cpp
+        train.cpp
+    )
+    OUTPUT_FILE="main_omp"
+    EXTRA_FLAGS="-fopenmp"
 else
     echo "❌ 无效的版本参数。请使用 0（普通）、1（pthread）、2（AVX）"
     exit 1

@@ -112,6 +112,13 @@ void PriorityQueue::CalProb(PT &pt)
 
 void PriorityQueue::init()
 {
+    //BUGFIX 疑似没有清空？
+    //BUGFIX测试发现， 真的没有清空啊
+    //于是先清空一下
+    // 不然由于没清空上次实验的PT，导致前面使用的PT，大多都是概率小，可能对应的value数也少？总之可能有影响
+    priority.clear();
+
+
     // cout << m.ordered_pts.size() << endl;
     // 用所有可能的PT，按概率降序填满整个优先队列
     for (PT pt : m.ordered_pts)

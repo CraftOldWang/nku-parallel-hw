@@ -1,4 +1,5 @@
 #include "PCFG.h"
+#include <omp.h>
 using namespace std;
 
 void PriorityQueue::CalProb(PT &pt)
@@ -52,6 +53,12 @@ void PriorityQueue::CalProb(PT &pt)
 
 void PriorityQueue::init()
 {
+    //BUGFIX 疑似没有清空？
+    //BUGFIX测试发现， 真的没有清空啊
+    //于是先清空一下
+    // 不然由于没清空上次实验的PT，导致前面使用的PT，大多都是概率小，可能对应的value数也少？总之可能有影响
+    priority.clear();
+
     // cout << m.ordered_pts.size() << endl;
     // 用所有可能的PT，按概率降序填满整个优先队列
     for (PT pt : m.ordered_pts)
@@ -207,12 +214,16 @@ void PriorityQueue::Generate(PT pt)
         // 这个for循环就是你需要进行并行化的主要部分了，特别是在多线程&GPU编程任务中
         // 可以看到，这个循环本质上就是把模型中一个segment的所有value，赋值到PT中，形成一系列新的猜测
         // 这个过程是可以高度并行化的
+        #pragma omp parallel for
         for (int i = 0; i < pt.max_indices[0]; i += 1)
         {
             string guess = a->ordered_values[i];
             // cout << guess << endl;
-            guesses.emplace_back(guess);
-            total_guesses += 1;
+            #pragma omp critical
+            {
+                guesses.emplace_back(guess);
+                total_guesses += 1;
+            }
         }
     }
     else
@@ -262,12 +273,16 @@ void PriorityQueue::Generate(PT pt)
         // 这个for循环就是你需要进行并行化的主要部分了，特别是在多线程&GPU编程任务中
         // 可以看到，这个循环本质上就是把模型中一个segment的所有value，赋值到PT中，形成一系列新的猜测
         // 这个过程是可以高度并行化的
+        #pragma omp parallel for
         for (int i = 0; i < pt.max_indices[pt.content.size() - 1]; i += 1)
         {
             string temp = guess + a->ordered_values[i];
             // cout << temp << endl;
+            #pragma omp critical
+            {
             guesses.emplace_back(temp);
             total_guesses += 1;
+            }
         }
     }
 }

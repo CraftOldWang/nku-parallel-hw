@@ -1,5 +1,67 @@
 #include "PCFG.h"
+#include "ThreadPool.h"
+#include "ThreadPoolAsync.h"
+#include <pthread.h>
+
 using namespace std;
+
+// 全局线程池实例定义
+ThreadPool* global_thread_pool = nullptr;
+pthread_mutex_t guess_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+// 全局异步任务跟踪
+vector<int> active_task_groups;
+pthread_mutex_t task_groups_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+// 初始化线程池
+void init_thread_pool() {
+    if (!global_thread_pool) {
+        global_thread_pool = new ThreadPool();
+    }
+    
+    // 初始化异步线程池
+    init_async_thread_pool();
+}
+
+// 清理线程池
+void cleanup_thread_pool() {
+    if (global_thread_pool) {
+        delete global_thread_pool;
+        global_thread_pool = nullptr;
+    }
+    
+    // 清理异步线程池
+    cleanup_async_thread_pool();
+}
+
+// 添加任务组ID到活动列表
+void add_active_task_group(int group_id) {
+    pthread_mutex_lock(&task_groups_mutex);
+    active_task_groups.push_back(group_id);
+    pthread_mutex_unlock(&task_groups_mutex);
+}
+
+// 检查并清理已完成的任务组
+void cleanup_completed_task_groups() {
+    pthread_mutex_lock(&task_groups_mutex);
+    auto it = active_task_groups.begin();
+    while (it != active_task_groups.end()) {
+        if (global_async_thread_pool->is_group_completed(*it)) {
+            it = active_task_groups.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    pthread_mutex_unlock(&task_groups_mutex);
+}
+
+// 获取活动任务组数量
+int get_active_task_groups_count() {
+    pthread_mutex_lock(&task_groups_mutex);
+    int count = active_task_groups.size();
+    pthread_mutex_unlock(&task_groups_mutex);
+    return count;
+}
 
 void PriorityQueue::CalProb(PT &pt)
 {
@@ -52,6 +114,12 @@ void PriorityQueue::CalProb(PT &pt)
 
 void PriorityQueue::init()
 {
+    //BUGFIX 疑似没有清空？
+    //BUGFIX测试发现， 真的没有清空啊
+    //于是先清空一下
+    // 不然由于没清空上次实验的PT，导致前面使用的PT，大多都是概率小，可能对应的value数也少？总之可能有影响
+    priority.clear();
+
     // cout << m.ordered_pts.size() << endl;
     // 用所有可能的PT，按概率降序填满整个优先队列
     for (PT pt : m.ordered_pts)
@@ -91,9 +159,47 @@ void PriorityQueue::init()
 
 void PriorityQueue::PopNext()
 {
-
-    // 对优先队列最前面的PT，首先利用这个PT生成一系列猜测
+    // 清理已完成的任务组，这样可以释放内存和资源
+    cleanup_completed_task_groups();
+    
+    // 更保守的并发控制策略，避免主线程跑得太快
+    int thread_count = global_async_thread_pool->get_pool_size();
+    int queue_size = global_async_thread_pool->get_queue_size();
+    
+    // 设置更保守的最大并发任务组数量
+    int max_concurrent_groups = thread_count;  // 从3倍减少到1倍
+    
+    // 队列太满时，进一步降低并发度
+    if (queue_size > thread_count * 5) {  // 从10倍改为5倍
+        max_concurrent_groups = max(1, thread_count / 2);
+    }
+    // 队列接近空时，适度提高并发度
+    else if (queue_size < thread_count / 2) {
+        max_concurrent_groups = thread_count * 2;  // 从4倍减少到2倍
+    }
+    
+    // 如果活动任务组数量超过阈值，等待一部分完成
+    int active_groups = get_active_task_groups_count();
+    while (active_groups > max_concurrent_groups) {
+        // 更长的等待时间，确保有足够时间让任务完成
+        usleep(5000);  // 5ms而不是动态计算
+        cleanup_completed_task_groups();
+        active_groups = get_active_task_groups_count();
+        
+        // 添加调试信息（可选）
+        // cout << "等待任务完成: 活动组=" << active_groups << ", 最大允许=" << max_concurrent_groups << endl;
+    }
+    
+    // 在Generate之前再次检查，确保系统稳定
+    if (queue_size > thread_count * 8) {
+        usleep(2000);  // 额外的2ms等待
+    }
+      // 对优先队列最前面的PT，首先利用这个PT生成一系列猜测 (异步方式)
     Generate(priority.front());
+    
+    // 添加一个小的延迟，让异步任务有时间开始执行
+    // 这可以避免主线程跑得太快导致的竞态条件
+    usleep(100);  // 0.1ms的小延迟
 
     // 然后需要根据即将出队的PT，生成一系列新的PT
     vector<PT> new_pts = priority.front().NewPTs();
@@ -202,18 +308,50 @@ void PriorityQueue::Generate(PT pt)
         {
             a = &m.symbols[m.FindSymbol(pt.content[0])];
         }
+          // 创建任务
+        vector<AsyncTask> tasks;
+        int total_values = pt.max_indices[0];
         
-        // Multi-thread TODO：
-        // 这个for循环就是你需要进行并行化的主要部分了，特别是在多线程&GPU编程任务中
-        // 可以看到，这个循环本质上就是把模型中一个segment的所有value，赋值到PT中，形成一系列新的猜测
-        // 这个过程是可以高度并行化的
-        for (int i = 0; i < pt.max_indices[0]; i += 1)
-        {
-            string guess = a->ordered_values[i];
-            // cout << guess << endl;
-            guesses.emplace_back(guess);
-            total_guesses += 1;
+        // 每个任务至少处理5000个值，以减少线程调度开销
+        const int MIN_CHUNK_SIZE = 5000;
+        int num_threads = global_async_thread_pool->get_pool_size();
+        int chunk_size;
+        
+        if (total_values < MIN_CHUNK_SIZE) {
+            // 如果总值小于5000，则一个线程处理所有工作
+            chunk_size = total_values;
+        } else {
+            // 计算每个线程至少处理5000个值的情况下需要多少线程
+            int needed_threads = (total_values + MIN_CHUNK_SIZE - 1) / MIN_CHUNK_SIZE;
+            
+            // 如果需要的线程数少于可用线程数，每个线程处理一个完整的块
+            if (needed_threads < num_threads) {
+                chunk_size = MIN_CHUNK_SIZE;
+            } else {
+                // 否则平均分配，但保证每个任务至少有一定数量的工作
+                chunk_size = max(1000, total_values / num_threads);
+            }
         }
+        
+        for (int i = 0; i < total_values; i += chunk_size) {
+            AsyncTask task;
+            task.seg = a;
+            task.prefix = "";
+            task.start_idx = i;
+            task.end_idx = min(i + chunk_size, total_values);
+            task.result_vec = &guesses;
+            task.counter = &total_guesses;
+            task.mutex = &guess_mutex;
+            task.is_single_segment = true;
+            tasks.push_back(task);
+        }
+          // 异步提交任务，不等待完成
+        if (tasks.size() > 0) {
+            int group_id = global_async_thread_pool->submit_tasks_async(tasks);
+            add_active_task_group(group_id);
+        }
+        
+        // 注意：不再调用 wait_all_tasks() 以提高并发性能
     }
     else
     {
@@ -257,17 +395,48 @@ void PriorityQueue::Generate(PT pt)
         {
             a = &m.symbols[m.FindSymbol(pt.content[pt.content.size() - 1])];
         }
+          // 创建任务
+        vector<AsyncTask> tasks;
+        int total_values = pt.max_indices[pt.content.size() - 1];
         
-        // Multi-thread TODO：
-        // 这个for循环就是你需要进行并行化的主要部分了，特别是在多线程&GPU编程任务中
-        // 可以看到，这个循环本质上就是把模型中一个segment的所有value，赋值到PT中，形成一系列新的猜测
-        // 这个过程是可以高度并行化的
-        for (int i = 0; i < pt.max_indices[pt.content.size() - 1]; i += 1)
-        {
-            string temp = guess + a->ordered_values[i];
-            // cout << temp << endl;
-            guesses.emplace_back(temp);
-            total_guesses += 1;
+        // 每个任务至少处理5000个值，以减少线程调度开销
+        const int MIN_CHUNK_SIZE = 5000;
+        int num_threads = global_async_thread_pool->get_pool_size();
+        int chunk_size;
+        
+        if (total_values < MIN_CHUNK_SIZE) {
+            // 如果总值小于5000，则一个线程处理所有工作
+            chunk_size = total_values;
+        } else {
+            // 计算每个线程至少处理5000个值的情况下需要多少线程
+            int needed_threads = (total_values + MIN_CHUNK_SIZE - 1) / MIN_CHUNK_SIZE;
+            
+            // 如果需要的线程数少于可用线程数，每个线程处理一个完整的块
+            if (needed_threads < num_threads) {
+                chunk_size = MIN_CHUNK_SIZE;
+            } else {
+                // 否则平均分配，但保证每个任务至少有一定数量的工作
+                chunk_size = max(1000, total_values / num_threads);
+            }
         }
+        
+        for (int i = 0; i < total_values; i += chunk_size) {
+            AsyncTask task;
+            task.seg = a;
+            task.prefix = guess;
+            task.start_idx = i;
+            task.end_idx = min(i + chunk_size, total_values);
+            task.result_vec = &guesses;
+            task.counter = &total_guesses;
+            task.mutex = &guess_mutex;
+            task.is_single_segment = false;
+            tasks.push_back(task);
+        }
+        
+        // 异步提交任务，不等待完成
+        int group_id = global_async_thread_pool->submit_tasks_async(tasks);
+        add_active_task_group(group_id);
+        
+        // 对于multi-segment PT，不再同步等待，以允许最大程度的并发处理
     }
 }
