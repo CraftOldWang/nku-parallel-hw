@@ -66,4 +66,6 @@ test.sh目前有三个参数，
     第二个参数对应申请核心数，多线程实验目前没有核心数申请要求，为1就行。
     第三个参数对应申请线程数，本次实验需要用到
 
+讲真， 有gpt可以快速上手Cmake，直接用起来而不需要学。Cmake比sh脚本方便查看。
 
+g++ -O2 guessing_pthread_pool.cpp train.cpp correctness_guess_pool.cpp md5.cpp -o main_pool

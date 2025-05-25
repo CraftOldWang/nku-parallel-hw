@@ -4,18 +4,35 @@
 #include "md5.h"
 #include <iomanip>
 #include <unordered_set>
+
+#ifdef F // 检查宏 F 是否被定义过，避免 undef 未定义的宏
+#undef F
+#endif
+
+
+#include "ThreadPool.h"
+#include "config.h"
+#include <pthread.h>
 using namespace std;
 using namespace chrono;
 
-#define USING_SMALL
+// #define USING_SMALL
 
 // 编译指令如下
 // g++ main.cpp train.cpp guessing.cpp md5.cpp -o main
 // g++ main.cpp train.cpp guessing.cpp md5.cpp -o main -O1
 // g++ main.cpp train.cpp guessing.cpp md5.cpp -o main -O2
 
+auto thread_pool = new ThreadPool(THREAD_NUM); // 创建一个线程池，线程数可以根据需要调整
+// 定义用于保护主要数据结构的互斥锁
+pthread_mutex_t main_data_mutex = PTHREAD_MUTEX_INITIALIZER;
+//大概会碰的就是 q.guesses吧？ 这个vector ，只有这个vector 是共享然后会写， 其他数据是安全的（要么不共享，要么只读）
+
+
 int main()
 {
+
+
     double time_hash = 0;  // 用于MD5哈希的时间
     double time_guess = 0; // 哈希和猜测的总时长
     double time_train = 0; // 模型训练的总时长
@@ -62,6 +79,7 @@ int main()
     int cracked=0;
 
     q.init();
+
     cout << "here" << endl;
     int curr_num = 0;
     auto start = system_clock::now();
@@ -71,10 +89,14 @@ int main()
     while (!q.priority.empty())
     {
         q.PopNext();
+
+        pthread_mutex_lock(&main_data_mutex);
         q.total_guesses = q.guesses.size();
+        pthread_mutex_unlock(&main_data_mutex);
         if (q.total_guesses - curr_num >= 100000)
         {
             cout << "Guesses generated: " <<history + q.total_guesses << endl;
+            // 这里读取什么的也许需要上锁？
             curr_num = q.total_guesses;
 
             // 在此处更改实验生成的猜测上限
@@ -97,6 +119,7 @@ int main()
         {
             auto start_hash = system_clock::now();
             bit32 state[4];
+            pthread_mutex_lock(&main_data_mutex); // hash 的时候，q.guesses不应该变动。
             for (string pw : q.guesses)
             {
                 if (test_set.find(pw) != test_set.end()) {
@@ -113,6 +136,8 @@ int main()
                 // }
                 // a << endl;
             }
+            pthread_mutex_unlock(&main_data_mutex);
+
 
             // 在这里对哈希所需的总时长进行计算
             auto end_hash = system_clock::now();
@@ -122,7 +147,10 @@ int main()
             // 记录已经生成的口令总数
             history += curr_num;
             curr_num = 0;
-            q.guesses.clear();
+            pthread_mutex_lock(&main_data_mutex);
+            q.guesses.clear(); // hash 之后就清空，以免浪费多线程生成的猜测。(但是这样hash时间会变长？)
+            //结果还是放回来了， 因为也许调用每个string 的析构很费时间。
+            pthread_mutex_unlock(&main_data_mutex);
         }
     }
 }
