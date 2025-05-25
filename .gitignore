@@ -3,3 +3,40 @@ PCFG_framework/.vscode
 main
 *.exe
 guessdata/
+
+# --- CMake ---
+build/
+CMakeFiles/
+CMakeCache.txt/
+Makefile/
+cmake_install.cmake/
+install_manifest.txt/
+
+# --- Clion && cmake---
+.idea/
+cmake-build-debug/
+cmake-build-release/
+
+
+# --- 编译产物 ---
+# ---*.o 这个我们做实验返回的。。。还是要同步到本地 ---
+*.obj
+*.so
+*.dll
+*.dylib
+*.a
+*.lib
+*.exe
+*.out
+
+
+# --- 日志和缓存 ---
+*.log
+*.tmp
+
+# --- 编辑器相关 ---
+.vscode/
+*.swp
+*~
+.DS_Store
+Thumbs.db
