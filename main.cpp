@@ -45,6 +45,8 @@ const int NUM_EXPERIMENTS = sizeof(EXPERIMENTS) / sizeof(EXPERIMENTS[0]);
 
 int main()
 {
+    system("chcp 65001 > nul");
+
     // 添加时间戳
     auto now = system_clock::now();
     auto now_time = system_clock::to_time_t(now);
@@ -60,7 +62,7 @@ int main()
     auto start_train = system_clock::now();
 // 将windows下用的main.cpp合并进来了
 #ifdef _WIN32
-    q.m.train(".\\guessdata\\small_Rockyou-singleLined-full.txt");
+    q.m.train(".\\guessdata\\Rockyou-singleLined-full.txt");
 #else
     q.m.train("/guessdata/Rockyou-singleLined-full.txt");
 #endif
