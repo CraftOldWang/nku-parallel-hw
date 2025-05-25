@@ -60,6 +60,7 @@ public:
     // 记录当前每个segment（除了最后一个）对应的value，在模型中的下标
     vector<int> curr_indices;
 
+    //BUGFIX 貌似这个max_indices, 也包含最后一个的
     // 记录当前每个segment（除了最后一个）对应的value，在模型中的最大下标（即最大可以是max_indices[x]-1）
     vector<int> max_indices;
     // void init();
