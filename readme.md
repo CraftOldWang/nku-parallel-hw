@@ -68,4 +68,8 @@ test.sh目前有三个参数，
 
 讲真， 有gpt可以快速上手Cmake，直接用起来而不需要学。Cmake比sh脚本方便查看。
 
-g++ -O2 guessing_pthread_pool.cpp train.cpp correctness_guess_pool.cpp md5.cpp -o main_pool
+修改了 main 和 guessing 文件，此外 config.h 是配置， ThreadPool.h 是https://github.com/progschj/ThreadPool 的C++线程池。
+测试
+g++ -O2 guessing_pthread_pool.cpp train.cpp correctness_guess_pool.cpp md5.cpp -o main
+实验
+g++ -O2 main_pool.cpp train.cpp correctness_guess_pool.cpp md5.cpp -o main

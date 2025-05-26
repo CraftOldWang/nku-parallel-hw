@@ -44,6 +44,15 @@ add_executable(main_normal
     guessing.cpp
     md5.cpp
 )
+target_link_libraries(main_normal PRIVATE Threads::Threads)
 
 
+
+add_executable(main_simd
+    train.cpp
+    md5.cpp
+    guessing_pthread_pool.cpp
+    main_pool.cpp
+    md5_simd.cpp
+)
 target_link_libraries(main_normal PRIVATE Threads::Threads)

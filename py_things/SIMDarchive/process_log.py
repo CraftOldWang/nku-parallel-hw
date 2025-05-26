@@ -1,11 +1,10 @@
 import os
 import glob
 
-
 def process_log(input_file, output_file):
     # 读取输入文件
     try:
-        with open(input_file, "r", encoding="utf-8") as f:
+        with open(input_file, 'r', encoding='utf-8') as f:
             lines = f.readlines()
     except UnicodeDecodeError:
         print(f"Warning: Could not decode {input_file} with UTF-8. Skipping.")
@@ -26,7 +25,7 @@ def process_log(input_file, output_file):
             continue
 
         # 检测实验开始分隔线
-        if line.startswith("=========================================="):
+        if line.startswith('=========================================='):
             if not in_experiment:
                 # 进入实验部分，期待标号行
                 in_experiment = True
@@ -38,39 +37,38 @@ def process_log(input_file, output_file):
                 expect_label = False
             continue
 
-        # 检测实验标号行（如"实验 #X"）
-        if expect_label and "实验 #" in line:
+        # 检测实验标号行（如“实验 #X”）
+        if expect_label and '实验 #' in line:
             output_lines.append(line)
             expect_label = False
             continue
 
-        # 在实验部分，处理"猜测上限"和"批处理大小"行
-        if in_experiment and "猜测上限" in line:
-            # 分割"猜测上限"和"批处理大小"
-            parts = line.split(",")
+        # 在实验部分，处理“猜测上限”和“批处理大小”行
+        if in_experiment and '猜测上限' in line:
+            # 分割“猜测上限”和“批处理大小”
+            parts = line.split(',')
             if len(parts) == 2:
-                output_lines.append(parts[0].strip() + "\n")  # 猜测上限
-                output_lines.append(parts[1].strip() + "\n")  # 批处理大小
+                output_lines.append(parts[0].strip() + '\n')  # 猜测上限
+                output_lines.append(parts[1].strip() + '\n')  # 批处理大小
             continue
 
-        # 检测"Guess time"行，保留
-        if "Guess time:" in line:
+        # 检测“Hash time”行，保留
+        if 'Hash time:' in line:
             output_lines.append(line)
             continue
 
     # 写入输出文件
     try:
-        with open(output_file, "w", encoding="utf-8") as f:
+        with open(output_file, 'w', encoding='utf-8') as f:
             f.writelines(output_lines)
         print(f"Processed {input_file} -> {output_file}")
     except Exception as e:
         print(f"Error writing to {output_file}: {e}")
 
-
 # 查找 ../ 目录下的 .o 和 .txt 文件
-input_dir = "../"
-output_dir = "."  # 当前目录
-file_patterns = ["*.o", "*.txt"]
+input_dir = '../'
+output_dir = '.'  # 当前目录
+file_patterns = ['*.o', '*.txt']
 
 for pattern in file_patterns:
     for input_file in glob.glob(os.path.join(input_dir, pattern)):

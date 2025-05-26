@@ -2,6 +2,13 @@
 #include <chrono>
 #include "md5.h"
 #include <iomanip>
+#include "config.h"
+
+// 如果定义了使用SIMD，则包含SIMD头文件
+#ifdef USING_SIMD
+#include "md5_simd.h"
+#endif
+
 using namespace std;
 using namespace chrono;
 
@@ -23,16 +30,6 @@ const ExperimentConfig EXPERIMENTS[] = {
     {40000000, 1000000, "数据集/小批次"},
     {45000000, 1000000, "数据集/小批次"},
     {50000000, 1000000, "数据集/小批次"},
-    // {55000000, 1000000, "数据集/小批次"},
-    // {60000000, 1000000, "数据集/小批次"},
-    // {65000000, 1000000, "数据集/小批次"},
-    // {70000000, 1000000, "数据集/小批次"},
-    // {75000000, 1000000, "数据集/小批次"},
-    // {80000000, 1000000, "数据集/小批次"},
-    // {85000000, 1000000, "数据集/小批次"},
-    // {90000000, 1000000, "数据集/小批次"},
-    // {95000000, 1000000, "数据集/小批次"},
-    // {100000000, 1000000, "数据集/小批次"},
 };
 
 // 要运行的实验数量
@@ -52,9 +49,17 @@ int main()
     auto now_time = system_clock::to_time_t(now);
 
 #ifdef _WIN32
+    #ifdef USING_SIMD
+    cout << "\n--- WIN SIMD MD5 实验批次 [" << std::ctime(&now_time) << "] ---\n";
+    #else
     cout << "\n--- WIN 标准 MD5 实验批次 [" << std::ctime(&now_time) << "] ---\n";
+    #endif
 #else
+    #ifdef USING_SIMD
+    cout << "\n--- SIMD MD5 实验批次 [" << std::ctime(&now_time) << "] ---\n";
+    #else
     cout << "\n--- 标准 MD5 实验批次 [" << std::ctime(&now_time) << "] ---\n";
+    #endif
 #endif
     
     // 训练模型（只需一次）
@@ -130,12 +135,52 @@ int main()
             if (curr_num > NUM_PER_HASH)
             {
                 auto start_hash = system_clock::now();
+                
+                #ifdef USING_SIMD
+                // 使用SIMD进行MD5计算
+                #ifdef USING_ALIGNED
+                alignas(16) uint32x4_t state[4]; // 每个lane 一个 口令的 一部分 state
+                #endif
+                #ifndef USING_ALIGNED
+                uint32x4_t state[4]; // 每个lane 一个 口令的 一部分 state
+                #endif
+
+                #ifdef NOT_USING_STRING_ARR
+                size_t i = 0;
+                for(; i < q.guesses.size(); i += 4){
+                    //HACK string 的copy 也很费时间
+                    string &pw1 = q.guesses[i];
+                    string &pw2 = q.guesses[i+1];
+                    string &pw3 = q.guesses[i+2];
+                    string &pw4 = q.guesses[i+3];
+    
+                    MD5Hash_SIMD(pw1, pw2, pw3, pw4, state);
+                }
+                bit32 state2[4];
+                for (; i < q.guesses.size(); ++i) {
+                    MD5Hash(q.guesses[i], state2); // 假设你有个单个处理版本
+                }
+                #endif
+
+                #ifndef NOT_USING_STRING_ARR
+                for(size_t i = 0; i < q.guesses.size(); i += 4){
+                    string pw[4] = {"", "", "", ""};
+                    for (int j = 0; j < 4 && (i + j) < q.guesses.size(); ++j) {
+                        pw[j] = q.guesses[i + j];
+                    }
+                    MD5Hash_SIMD(pw, state);
+                }    
+                #endif
+                
+                #else
+                // 使用标准MD5计算
                 bit32 state[4];
                 
                 for (string pw : q.guesses)
                 {
                     MD5Hash(pw, state);
                 }
+                #endif
                 
                 // 计算哈希时间
                 auto end_hash = system_clock::now();
