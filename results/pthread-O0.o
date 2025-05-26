@@ -1,5 +1,5 @@
 
---- 标准 MD5 实验批次 [Sun May 25 14:18:25 2025
+--- 标准 MD5 实验批次 [Mon May 26 14:13:50 2025
 ] ---
 Training...
 Training phase 1: reading and parsing passwords...
@@ -8,7 +8,7 @@ total pts18966
 Ordering letters
 Ordering digits
 ordering symbols
-模型训练完成，耗时: 26.4055 秒
+模型训练完成，耗时: 95.319 秒
 
 ==========================================
 实验 #1: 数据集/小批次
@@ -18,10 +18,10 @@ ordering symbols
 --- 实验结果 ---
 猜测上限: 10000000, 批处理大小: 1000000
 Guesses generated: 10106852
-Guess time: 0.581969 seconds
-Hash time: 3.02751 seconds
-Train time: 26.4055 seconds
-Total time: 3.60948 seconds
+Guess time: 7.93057 seconds
+Hash time: 9.45666 seconds
+Train time: 95.319 seconds
+Total time: 17.3872 seconds
 -------------------
 
 ==========================================
@@ -32,10 +32,10 @@ Total time: 3.60948 seconds
 --- 实验结果 ---
 猜测上限: 15000000, 批处理大小: 1000000
 Guesses generated: 15033107
-Guess time: 0.816419 seconds
-Hash time: 4.44691 seconds
-Train time: 26.4055 seconds
-Total time: 5.26333 seconds
+Guess time: 11.2171 seconds
+Hash time: 14.0792 seconds
+Train time: 95.319 seconds
+Total time: 25.2963 seconds
 -------------------
 
 ==========================================
@@ -46,10 +46,10 @@ Total time: 5.26333 seconds
 --- 实验结果 ---
 猜测上限: 20000000, 批处理大小: 1000000
 Guesses generated: 20014357
-Guess time: 1.11226 seconds
-Hash time: 6.14073 seconds
-Train time: 26.4055 seconds
-Total time: 7.25299 seconds
+Guess time: 15.4571 seconds
+Hash time: 19.4411 seconds
+Train time: 95.319 seconds
+Total time: 34.8982 seconds
 -------------------
 
 ==========================================
@@ -60,10 +60,10 @@ Total time: 7.25299 seconds
 --- 实验结果 ---
 猜测上限: 25000000, 批处理大小: 1000000
 Guesses generated: 25043101
-Guess time: 1.37472 seconds
-Hash time: 7.8512 seconds
-Train time: 26.4055 seconds
-Total time: 9.22592 seconds
+Guess time: 18.3395 seconds
+Hash time: 24.7686 seconds
+Train time: 95.319 seconds
+Total time: 43.1081 seconds
 -------------------
 
 ==========================================
@@ -74,10 +74,10 @@ Total time: 9.22592 seconds
 --- 实验结果 ---
 猜测上限: 30000000, 批处理大小: 1000000
 Guesses generated: 30033073
-Guess time: 1.6242 seconds
-Hash time: 9.19989 seconds
-Train time: 26.4055 seconds
-Total time: 10.8241 seconds
+Guess time: 21.0826 seconds
+Hash time: 28.7208 seconds
+Train time: 95.319 seconds
+Total time: 49.8035 seconds
 -------------------
 
 ==========================================
@@ -88,10 +88,10 @@ Total time: 10.8241 seconds
 --- 实验结果 ---
 猜测上限: 35000000, 批处理大小: 1000000
 Guesses generated: 35080462
-Guess time: 1.93622 seconds
-Hash time: 10.9795 seconds
-Train time: 26.4055 seconds
-Total time: 12.9157 seconds
+Guess time: 24.0389 seconds
+Hash time: 34.4332 seconds
+Train time: 95.319 seconds
+Total time: 58.4722 seconds
 -------------------
 
 ==========================================
@@ -102,10 +102,10 @@ Total time: 12.9157 seconds
 --- 实验结果 ---
 猜测上限: 40000000, 批处理大小: 1000000
 Guesses generated: 40101264
-Guess time: 2.16712 seconds
-Hash time: 12.6589 seconds
-Train time: 26.4055 seconds
-Total time: 14.826 seconds
+Guess time: 26.528 seconds
+Hash time: 39.6247 seconds
+Train time: 95.319 seconds
+Total time: 66.1527 seconds
 -------------------
 
 ==========================================
@@ -116,10 +116,10 @@ Total time: 14.826 seconds
 --- 实验结果 ---
 猜测上限: 45000000, 批处理大小: 1000000
 Guesses generated: 45071088
-Guess time: 2.46884 seconds
-Hash time: 14.3244 seconds
-Train time: 26.4055 seconds
-Total time: 16.7933 seconds
+Guess time: 30.3418 seconds
+Hash time: 45.037 seconds
+Train time: 95.319 seconds
+Total time: 75.3789 seconds
 -------------------
 
 ==========================================
@@ -130,10 +130,10 @@ Total time: 16.7933 seconds
 --- 实验结果 ---
 猜测上限: 50000000, 批处理大小: 1000000
 Guesses generated: 50080854
-Guess time: 3.05168 seconds
-Hash time: 16.1466 seconds
-Train time: 26.4055 seconds
-Total time: 19.1982 seconds
+Guess time: 33.4283 seconds
+Hash time: 48.7582 seconds
+Train time: 95.319 seconds
+Total time: 82.1865 seconds
 -------------------
 
 --- 实验批次结束 ---
