@@ -18,7 +18,9 @@ using namespace chrono;
 
 // #define USING_SMALL
 
+
 // 编译指令如下
+// g++ correctness_guess_pool.cpp train.cpp guessing_pthread_pool.cpp md5.cpp -o main -O2
 // g++ main.cpp train.cpp guessing.cpp md5.cpp -o main
 // g++ main.cpp train.cpp guessing.cpp md5.cpp -o main -O1
 // g++ main.cpp train.cpp guessing.cpp md5.cpp -o main -O2
