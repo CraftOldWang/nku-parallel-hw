@@ -22,4 +22,3 @@ Traceback (most recent call last):
   File "/usr/local/lib/python3.9/site-packages/psshlib/cli.py", line 22, in common_parser
     version=version.VERSION)
 AttributeError: module 'version' has no attribute 'VERSION'
-sh: line 1: chcp: command not found
