@@ -4,16 +4,34 @@
 #include "md5.h"
 #include <iomanip>
 #include <unordered_set>
+#include <mpi.h>
 using namespace std;
 using namespace chrono;
 
 // 编译指令如下
-// g++ main.cpp train.cpp guessing.cpp md5.cpp -o main
-// g++ main.cpp train.cpp guessing.cpp md5.cpp -o main -O1
-// g++ main.cpp train.cpp guessing.cpp md5.cpp -o main -O2
+// mpicxx correctness_guess_MPI.cpp train.cpp guessing_MPI.cpp md5.cpp -o main_mpi
+// mpicxx correctness_guess_MPI.cpp train.cpp guessing_MPI.cpp md5.cpp -o main_mpi -O1
+// mpicxx correctness_guess_MPI.cpp train.cpp guessing_MPI.cpp md5.cpp -o main_mpi -O2
+
+// MPI消息标签定义
+#define TAG_TASK 1
+#define TAG_RESULT 2
+#define TAG_TERMINATE 3
+
+// 工作进程函数声明
+void worker_process();
 
 int main()
 {
+    // 初始化MPI
+    MPI_Init(NULL, NULL);
+    
+    int rank, size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    
+    if (rank == 0) {
+        // 主进程执行原有逻辑
     double time_hash = 0;  // 用于MD5哈希的时间
     double time_guess = 0; // 哈希和猜测的总时长
     double time_train = 0; // 模型训练的总时长
@@ -49,7 +67,7 @@ int main()
     auto start = system_clock::now();
     // 由于需要定期清空内存，我们在这里记录已生成的猜测总数
     int history = 0;
-    // std::ofstream a("./files/results.txt");
+    // std::ofstream a("./files/results.txt");    
     while (!q.priority.empty())
     {
         q.PopNext();
@@ -103,8 +121,83 @@ int main()
 
             // 记录已经生成的口令总数
             history += curr_num;
-            curr_num = 0;
+            curr_num = 0;            
             q.guesses.clear();
+        }
+    }
+    
+    // 发送终止信号给所有工作进程
+    for (int i = 1; i < size; i++) {
+        int terminate_signal = -1;
+        MPI_Send(&terminate_signal, 1, MPI_INT, i, TAG_TERMINATE, MPI_COMM_WORLD);
+    }
+    
+    } else {
+        // 工作进程
+        worker_process();
+    }
+    
+    MPI_Finalize();
+    return 0;
+}
+
+// 工作进程函数实现
+void worker_process() {
+    while (true) {
+        // 接收任务信号
+        int task_signal;
+        MPI_Status status;
+        MPI_Recv(&task_signal, 1, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+        
+        if (status.MPI_TAG == TAG_TERMINATE) {
+            break; // 收到终止信号，退出循环
+        }
+          if (status.MPI_TAG == TAG_TASK) {
+            // 接收任务数据
+            int prefix_len, values_count, start_idx, end_idx;
+            MPI_Recv(&prefix_len, 1, MPI_INT, 0, TAG_TASK, MPI_COMM_WORLD, &status);
+            
+            string prefix = "";
+            if (prefix_len > 0) {
+                char* prefix_buffer = new char[prefix_len + 1];
+                MPI_Recv(prefix_buffer, prefix_len, MPI_CHAR, 0, TAG_TASK, MPI_COMM_WORLD, &status);
+                prefix_buffer[prefix_len] = '\0';
+                prefix = string(prefix_buffer);
+                delete[] prefix_buffer;
+            }
+            
+            MPI_Recv(&values_count, 1, MPI_INT, 0, TAG_TASK, MPI_COMM_WORLD, &status);
+            MPI_Recv(&start_idx, 1, MPI_INT, 0, TAG_TASK, MPI_COMM_WORLD, &status);
+            MPI_Recv(&end_idx, 1, MPI_INT, 0, TAG_TASK, MPI_COMM_WORLD, &status);
+            
+            // 接收values数组
+            vector<string> values(values_count);
+            for (int i = 0; i < values_count; i++) {
+                int value_len;
+                MPI_Recv(&value_len, 1, MPI_INT, 0, TAG_TASK, MPI_COMM_WORLD, &status);
+                char* value_buffer = new char[value_len + 1];
+                MPI_Recv(value_buffer, value_len, MPI_CHAR, 0, TAG_TASK, MPI_COMM_WORLD, &status);
+                value_buffer[value_len] = '\0';
+                values[i] = string(value_buffer);
+                delete[] value_buffer;
+            }
+            
+            // 生成猜测
+            vector<string> local_guesses;
+            for (int i = start_idx; i < end_idx; i++) {
+                string guess = prefix + values[i];
+                local_guesses.push_back(guess);
+            }
+            
+            // 发送结果回主进程
+            int result_count = local_guesses.size();
+            MPI_Send(&result_count, 1, MPI_INT, 0, TAG_RESULT, MPI_COMM_WORLD);
+            
+            for (const string& guess : local_guesses) {
+                int guess_len = guess.length();
+                MPI_Send(&guess_len, 1, MPI_INT, 0, TAG_RESULT, MPI_COMM_WORLD);
+                MPI_Send(guess.c_str(), guess_len, MPI_CHAR, 0, TAG_RESULT, MPI_COMM_WORLD);
+            }
         }
     }
 }
