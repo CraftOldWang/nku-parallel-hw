@@ -34,3 +34,6 @@ SIMD 对比就拿上次实验的， 别再做了。
 MPI
 
 mpic++ -o main correctness_guess_MPI.cpp train.cpp guessing_MPI.cpp md5.cpp -O2
+
+提交
+qsub qsub_mpi.sh
