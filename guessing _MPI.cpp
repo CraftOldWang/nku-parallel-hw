@@ -1,4 +1,6 @@
 #include "PCFG.h"
+#include <mpi.h>
+#include <vector>
 using namespace std;
 
 void PriorityQueue::CalProb(PT &pt)
@@ -191,6 +193,11 @@ void PriorityQueue::Generate(PT pt)
     // 计算PT的概率，这里主要是给PT的概率进行初始化
     CalProb(pt);
 
+    // 获取MPI进程信息
+    int rank, size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+
     // 对于只有一个segment的PT，直接遍历生成其中的所有value即可
     if (pt.content.size() == 1)
     {
@@ -210,16 +217,66 @@ void PriorityQueue::Generate(PT pt)
             a = &m.symbols[m.FindSymbol(pt.content[0])];
         }
         
-        // Multi-thread TODO：
-        // 这个for循环就是你需要进行并行化的主要部分了，特别是在多线程&GPU编程任务中
-        // 可以看到，这个循环本质上就是把模型中一个segment的所有value，赋值到PT中，形成一系列新的猜测
-        // 这个过程是可以高度并行化的
-        for (int i = 0; i < pt.max_indices[0]; i += 1)
+        // MPI并行实现
+        // 计算当前进程应处理的范围
+        int total_values = pt.max_indices[0];
+        int chunk_size = total_values / size;
+        int start_idx = rank * chunk_size;
+        int end_idx = (rank == size - 1) ? total_values : (rank + 1) * chunk_size;
+          // 创建本地猜测容器
+        vector<string> local_guesses;
+        int local_total = 0;
+        
+        // 每个进程只处理自己负责的部分
+        for (int i = start_idx; i < end_idx; i += 1)
         {
             string guess = a->ordered_values[i];
-            // cout << guess << endl;
-            guesses.emplace_back(guess);
-            total_guesses += 1;
+            local_guesses.emplace_back(guess);
+            local_total += 1;
+        }
+        
+        // 收集所有进程的结果到根进程
+        if (rank == 0) {
+            // 根进程首先添加自己的结果
+            for (const string& guess : local_guesses) {
+                guesses.emplace_back(guess);
+                total_guesses += 1;
+            }
+            
+            // 然后从其他进程收集结果
+            for (int p = 1; p < size; p++) {
+                // 接收其他进程的猜测数量
+                int recv_count = 0;
+                MPI_Recv(&recv_count, 1, MPI_INT, p, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                
+                // 根据收到的数量接收猜测
+                for (int j = 0; j < recv_count; j++) {
+                    int str_len = 0;
+                    MPI_Recv(&str_len, 1, MPI_INT, p, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                    
+                    // 接收字符串
+                    char* buffer = new char[str_len + 1];
+                    MPI_Recv(buffer, str_len, MPI_CHAR, p, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                    buffer[str_len] = '\0';
+                    
+                    string recv_guess(buffer);
+                    guesses.emplace_back(recv_guess);
+                    total_guesses += 1;
+                    
+                    delete[] buffer;
+                }
+            }
+        } else {
+            // 非根进程将结果发送给根进程
+            // 首先发送猜测总数
+            MPI_Send(&local_total, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+            
+            // 逐个发送猜测
+            for (const string& guess : local_guesses) {
+                int str_len = guess.length();
+                MPI_Send(&str_len, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+                MPI_Send(guess.c_str(), str_len, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
+            }
         }
     }
     else
@@ -264,17 +321,67 @@ void PriorityQueue::Generate(PT pt)
         {
             a = &m.symbols[m.FindSymbol(pt.content[pt.content.size() - 1])];
         }
+          // MPI并行实现
+        // 计算当前进程应处理的范围
+        int total_values = pt.max_indices[pt.content.size() - 1];
+        int chunk_size = total_values / size;
+        int start_idx = rank * chunk_size;
+        int end_idx = (rank == size - 1) ? total_values : (rank + 1) * chunk_size;
         
-        // Multi-thread TODO：
-        // 这个for循环就是你需要进行并行化的主要部分了，特别是在多线程&GPU编程任务中
-        // 可以看到，这个循环本质上就是把模型中一个segment的所有value，赋值到PT中，形成一系列新的猜测
-        // 这个过程是可以高度并行化的
-        for (int i = 0; i < pt.max_indices[pt.content.size() - 1]; i += 1)
+        // 创建本地猜测容器
+        vector<string> local_guesses;
+        int local_total = 0;
+        
+        // 每个进程只处理自己负责的部分
+        for (int i = start_idx; i < end_idx; i += 1)
         {
             string temp = guess + a->ordered_values[i];
-            // cout << temp << endl;
-            guesses.emplace_back(temp);
-            total_guesses += 1;
+            local_guesses.emplace_back(temp);
+            local_total += 1;
+        }
+        
+        // 收集所有进程的结果到根进程
+        if (rank == 0) {
+            // 根进程首先添加自己的结果
+            for (const string& guess : local_guesses) {
+                guesses.emplace_back(guess);
+                total_guesses += 1;
+            }
+            
+            // 然后从其他进程收集结果
+            for (int p = 1; p < size; p++) {
+                // 接收其他进程的猜测数量
+                int recv_count = 0;
+                MPI_Recv(&recv_count, 1, MPI_INT, p, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                
+                // 根据收到的数量接收猜测
+                for (int j = 0; j < recv_count; j++) {
+                    int str_len = 0;
+                    MPI_Recv(&str_len, 1, MPI_INT, p, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                    
+                    // 接收字符串
+                    char* buffer = new char[str_len + 1];
+                    MPI_Recv(buffer, str_len, MPI_CHAR, p, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                    buffer[str_len] = '\0';
+                    
+                    string recv_guess(buffer);
+                    guesses.emplace_back(recv_guess);
+                    total_guesses += 1;
+                    
+                    delete[] buffer;
+                }
+            }
+        } else {
+            // 非根进程将结果发送给根进程
+            // 首先发送猜测总数
+            MPI_Send(&local_total, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+            
+            // 逐个发送猜测
+            for (const string& guess : local_guesses) {
+                int str_len = guess.length();
+                MPI_Send(&str_len, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+                MPI_Send(guess.c_str(), str_len, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
+            }
         }
     }
 }
