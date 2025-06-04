@@ -73,3 +73,7 @@ test.sh目前有三个参数，
 g++ -O2 guessing_pthread_pool.cpp train.cpp correctness_guess_pool.cpp md5.cpp -o main
 实验
 g++ -O2 main_pool.cpp train.cpp correctness_guess_pool.cpp md5.cpp -o main
+
+## 实验4 MPI
+
+
