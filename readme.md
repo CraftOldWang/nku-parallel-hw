@@ -76,4 +76,7 @@ g++ -O2 main_pool.cpp train.cpp correctness_guess_pool.cpp md5.cpp -o main
 
 ## 实验4 MPI
 
+没有在服务器上跑.
+本地是使用cmake构建的，见CmakeLists.txt
+只试过8进程。
 
