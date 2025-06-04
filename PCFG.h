@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <queue>
 #include <omp.h>
+#include <mpi.h>
 // #include <chrono>   
 // using namespace chrono;
 using namespace std;

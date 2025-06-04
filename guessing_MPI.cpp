@@ -1,5 +1,11 @@
 #include "PCFG.h"
+#include <mpi.h>
 using namespace std;
+
+// MPI消息标签定义
+#define TAG_TASK 1
+#define TAG_RESULT 2
+#define TAG_TERMINATE 3
 
 void PriorityQueue::CalProb(PT &pt)
 {
@@ -186,11 +192,17 @@ vector<PT> PT::NewPTs()
 
 // 这个函数是PCFG并行化算法的主要载体
 // 尽量看懂，然后进行并行实现
+// MPI并行版本的Generate函数
 void PriorityQueue::Generate(PT pt)
 {
     // 计算PT的概率，这里主要是给PT的概率进行初始化
     CalProb(pt);
-
+    
+    // 获取MPI信息
+    int rank, size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    
     // 对于只有一个segment的PT，直接遍历生成其中的所有value即可
     if (pt.content.size() == 1)
     {
@@ -210,25 +222,76 @@ void PriorityQueue::Generate(PT pt)
             a = &m.symbols[m.FindSymbol(pt.content[0])];
         }
         
-        // Multi-thread TODO：
-        // 这个for循环就是你需要进行并行化的主要部分了，特别是在多线程&GPU编程任务中
-        // 可以看到，这个循环本质上就是把模型中一个segment的所有value，赋值到PT中，形成一系列新的猜测
-        // 这个过程是可以高度并行化的
-        for (int i = 0; i < pt.max_indices[0]; i += 1)
-        {
-            string guess = a->ordered_values[i];
-            // cout << guess << endl;
-            guesses.emplace_back(guess);
-            total_guesses += 1;
+        // MPI并行化部分：将任务分发给工作进程
+        int total_values = pt.max_indices[0];
+        int workers = size - 1; // 工作进程数量
+        
+        if (workers > 0 && total_values > workers) {
+            // 计算每个进程的工作量
+            int chunk_size = total_values / workers;
+            int remainder = total_values % workers;
+            
+            // 分发任务给工作进程
+            for (int i = 1; i < size; i++) {
+                int start_idx = (i - 1) * chunk_size + min(i - 1, remainder);
+                int end_idx = start_idx + chunk_size + (i - 1 < remainder ? 1 : 0);
+                
+                // 发送任务信号
+                int task_signal = 1;
+                MPI_Send(&task_signal, 1, MPI_INT, i, TAG_TASK, MPI_COMM_WORLD);
+                
+                // 发送前缀（空字符串）
+                string prefix = "";
+                int prefix_len = prefix.length();
+                MPI_Send(&prefix_len, 1, MPI_INT, i, TAG_TASK, MPI_COMM_WORLD);
+                
+                // 发送values数组大小和工作范围
+                int values_count = a->ordered_values.size();
+                MPI_Send(&values_count, 1, MPI_INT, i, TAG_TASK, MPI_COMM_WORLD);
+                MPI_Send(&start_idx, 1, MPI_INT, i, TAG_TASK, MPI_COMM_WORLD);
+                MPI_Send(&end_idx, 1, MPI_INT, i, TAG_TASK, MPI_COMM_WORLD);
+                
+                // 发送values数组
+                for (const string& value : a->ordered_values) {
+                    int value_len = value.length();
+                    MPI_Send(&value_len, 1, MPI_INT, i, TAG_TASK, MPI_COMM_WORLD);
+                    MPI_Send(value.c_str(), value_len, MPI_CHAR, i, TAG_TASK, MPI_COMM_WORLD);
+                }
+            }
+            
+            // 收集结果
+            for (int i = 1; i < size; i++) {
+                int result_count;
+                MPI_Status status;
+                MPI_Recv(&result_count, 1, MPI_INT, i, TAG_RESULT, MPI_COMM_WORLD, &status);
+                
+                for (int j = 0; j < result_count; j++) {
+                    int guess_len;
+                    MPI_Recv(&guess_len, 1, MPI_INT, i, TAG_RESULT, MPI_COMM_WORLD, &status);
+                    char* guess_buffer = new char[guess_len + 1];
+                    MPI_Recv(guess_buffer, guess_len, MPI_CHAR, i, TAG_RESULT, MPI_COMM_WORLD, &status);
+                    guess_buffer[guess_len] = '\0';
+                    
+                    guesses.emplace_back(string(guess_buffer));
+                    total_guesses += 1;
+                    delete[] guess_buffer;
+                }
+            }
+        } else {
+            // 如果工作进程太少或任务太小，主进程自己处理
+            for (int i = 0; i < pt.max_indices[0]; i += 1)
+            {
+                string guess = a->ordered_values[i];
+                guesses.emplace_back(guess);
+                total_guesses += 1;
+            }
         }
     }
     else
     {
         string guess;
         int seg_idx = 0;
-        // 这个for循环的作用：给当前PT的所有segment赋予实际的值（最后一个segment除外）
-        // segment值根据curr_indices中对应的值加以确定
-        // 这个for循环你看不懂也没太大问题，并行算法不涉及这里的加速
+        // 给当前PT的所有segment赋予实际的值（最后一个segment除外）
         for (int idx : pt.curr_indices)
         {
             if (pt.content[seg_idx].type == 1)
@@ -250,7 +313,7 @@ void PriorityQueue::Generate(PT pt)
             }
         }
 
-        // 指向最后一个segment的指针，这个指针实际指向模型中的统计数据
+        // 指向最后一个segment的指针
         segment *a;
         if (pt.content[pt.content.size() - 1].type == 1)
         {
@@ -265,16 +328,71 @@ void PriorityQueue::Generate(PT pt)
             a = &m.symbols[m.FindSymbol(pt.content[pt.content.size() - 1])];
         }
         
-        // Multi-thread TODO：
-        // 这个for循环就是你需要进行并行化的主要部分了，特别是在多线程&GPU编程任务中
-        // 可以看到，这个循环本质上就是把模型中一个segment的所有value，赋值到PT中，形成一系列新的猜测
-        // 这个过程是可以高度并行化的
-        for (int i = 0; i < pt.max_indices[pt.content.size() - 1]; i += 1)
-        {
-            string temp = guess + a->ordered_values[i];
-            // cout << temp << endl;
-            guesses.emplace_back(temp);
-            total_guesses += 1;
+        // MPI并行化部分：将任务分发给工作进程
+        int total_values = pt.max_indices[pt.content.size() - 1];
+        int workers = size - 1; // 工作进程数量
+        
+        if (workers > 0 && total_values > workers) {
+            // 计算每个进程的工作量
+            int chunk_size = total_values / workers;
+            int remainder = total_values % workers;
+            
+            // 分发任务给工作进程
+            for (int i = 1; i < size; i++) {
+                int start_idx = (i - 1) * chunk_size + min(i - 1, remainder);
+                int end_idx = start_idx + chunk_size + (i - 1 < remainder ? 1 : 0);
+                
+                // 发送任务信号
+                int task_signal = 1;
+                MPI_Send(&task_signal, 1, MPI_INT, i, TAG_TASK, MPI_COMM_WORLD);
+                
+                // 发送前缀字符串
+                int prefix_len = guess.length();
+                MPI_Send(&prefix_len, 1, MPI_INT, i, TAG_TASK, MPI_COMM_WORLD);
+                if (prefix_len > 0) {
+                    MPI_Send(guess.c_str(), prefix_len, MPI_CHAR, i, TAG_TASK, MPI_COMM_WORLD);
+                }
+                
+                // 发送values数组大小和工作范围
+                int values_count = a->ordered_values.size();
+                MPI_Send(&values_count, 1, MPI_INT, i, TAG_TASK, MPI_COMM_WORLD);
+                MPI_Send(&start_idx, 1, MPI_INT, i, TAG_TASK, MPI_COMM_WORLD);
+                MPI_Send(&end_idx, 1, MPI_INT, i, TAG_TASK, MPI_COMM_WORLD);
+                
+                // 发送values数组
+                for (const string& value : a->ordered_values) {
+                    int value_len = value.length();
+                    MPI_Send(&value_len, 1, MPI_INT, i, TAG_TASK, MPI_COMM_WORLD);
+                    MPI_Send(value.c_str(), value_len, MPI_CHAR, i, TAG_TASK, MPI_COMM_WORLD);
+                }
+            }
+            
+            // 收集结果
+            for (int i = 1; i < size; i++) {
+                int result_count;
+                MPI_Status status;
+                MPI_Recv(&result_count, 1, MPI_INT, i, TAG_RESULT, MPI_COMM_WORLD, &status);
+                
+                for (int j = 0; j < result_count; j++) {
+                    int guess_len;
+                    MPI_Recv(&guess_len, 1, MPI_INT, i, TAG_RESULT, MPI_COMM_WORLD, &status);
+                    char* guess_buffer = new char[guess_len + 1];
+                    MPI_Recv(guess_buffer, guess_len, MPI_CHAR, i, TAG_RESULT, MPI_COMM_WORLD, &status);
+                    guess_buffer[guess_len] = '\0';
+                    
+                    guesses.emplace_back(string(guess_buffer));
+                    total_guesses += 1;
+                    delete[] guess_buffer;
+                }
+            }
+        } else {
+            // 如果工作进程太少或任务太小，主进程自己处理
+            for (int i = 0; i < pt.max_indices[pt.content.size() - 1]; i += 1)
+            {
+                string temp = guess + a->ordered_values[i];
+                guesses.emplace_back(temp);
+                total_guesses += 1;
+            }
         }
     }
 }
