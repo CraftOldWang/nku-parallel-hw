@@ -4,7 +4,6 @@
 #include "md5.h"
 #include <iomanip>
 #include <unordered_set>
-#include <mpi.h>
 using namespace std;
 using namespace chrono;
 
@@ -13,22 +12,12 @@ using namespace chrono;
 // g++ main.cpp train.cpp guessing.cpp md5.cpp -o main -O1
 // g++ main.cpp train.cpp guessing.cpp md5.cpp -o main -O2
 
-int main(int argc, char* argv[])
+int main()
 {
-    // Initialize MPI
-    MPI_Init(&argc, &argv);
-    
-    // Get process rank
-    int rank, size;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-    
     double time_hash = 0;  // 用于MD5哈希的时间
     double time_guess = 0; // 哈希和猜测的总时长
     double time_train = 0; // 模型训练的总时长
     PriorityQueue q;
-    
-    // All processes need to load the model for the parallel sections to work
     auto start_train = system_clock::now();
     q.m.train("/guessdata/Rockyou-singleLined-full.txt");
     q.m.order();
@@ -37,7 +26,8 @@ int main(int argc, char* argv[])
     time_train = double(duration_train.count()) * microseconds::period::num / microseconds::period::den;
 
 
-      // 加载一些测试数据
+    
+    // 加载一些测试数据
     unordered_set<std::string> test_set;
     ifstream test_data("/guessdata/Rockyou-singleLined-full.txt");
     int test_count=0;
@@ -54,9 +44,8 @@ int main(int argc, char* argv[])
     int cracked=0;
 
     q.init();
-    if (rank == 0) {
-        cout << "here" << endl;
-    }    int curr_num = 0;
+    cout << "here" << endl;
+    int curr_num = 0;
     auto start = system_clock::now();
     // 由于需要定期清空内存，我们在这里记录已生成的猜测总数
     int history = 0;
@@ -67,9 +56,7 @@ int main(int argc, char* argv[])
         q.total_guesses = q.guesses.size();
         if (q.total_guesses - curr_num >= 100000)
         {
-            if (rank == 0) {
-                cout << "Guesses generated: " <<history + q.total_guesses << endl;
-            }
+            cout << "Guesses generated: " <<history + q.total_guesses << endl;
             curr_num = q.total_guesses;
 
             // 在此处更改实验生成的猜测上限
@@ -79,12 +66,10 @@ int main(int argc, char* argv[])
                 auto end = system_clock::now();
                 auto duration = duration_cast<microseconds>(end - start);
                 time_guess = double(duration.count()) * microseconds::period::num / microseconds::period::den;
-                if (rank == 0) {
-                    cout << "Guess time:" << time_guess - time_hash << "seconds"<< endl;
-                    cout << "Hash time:" << time_hash << "seconds"<<endl;
-                    cout << "Train time:" << time_train <<"seconds"<<endl;
-                    cout<<"Cracked:"<< cracked<<endl;
-                }
+                cout << "Guess time:" << time_guess - time_hash << "seconds"<< endl;
+                cout << "Hash time:" << time_hash << "seconds"<<endl;
+                cout << "Train time:" << time_train <<"seconds"<<endl;
+                cout<<"Cracked:"<< cracked<<endl;
                 break;
             }
         }
@@ -122,7 +107,4 @@ int main(int argc, char* argv[])
             q.guesses.clear();
         }
     }
-    
-    // Finalize MPI
-    MPI_Finalize();
 }
