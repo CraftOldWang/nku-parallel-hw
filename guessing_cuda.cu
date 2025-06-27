@@ -1,4 +1,5 @@
 #include "PCFG.h"
+#include "config.h"
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include <vector>

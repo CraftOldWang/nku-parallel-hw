@@ -19,7 +19,7 @@ nvcc --version
 # 编译CUDA版本
 echo ""
 echo "正在编译..."
-nvcc -std=c++11 -O2 \
+nvcc -std=c++14 -O2 \
     -o main_cuda \
     main_cuda.cpp \
     guessing_cuda.cu \
@@ -28,7 +28,8 @@ nvcc -std=c++11 -O2 \
     md5.cpp \
     -I. \
     --expt-relaxed-constexpr \
-    --extended-lambda
+    --extended-lambda \
+    -Xcompiler -fPIC
 
 if [ $? -eq 0 ]; then
     echo ""
