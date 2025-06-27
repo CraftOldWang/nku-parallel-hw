@@ -38,7 +38,9 @@ const int NUM_EXPERIMENTS = sizeof(EXPERIMENTS) / sizeof(EXPERIMENTS[0]);
 
 int main()
 {
+#ifdef _WIN32
     system("chcp 65001 > nul");
+#endif
 
     // 检查CUDA设备
     int deviceCount;
