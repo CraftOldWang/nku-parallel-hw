@@ -1,85 +1,86 @@
-cmake_minimum_required(VERSION 3.30)
-project(correct_test CXX)
-project(main_pool CXX)
+cmake_minimum_required(VERSION 3.18)
+project(GuessPasswordCUDA LANGUAGES CXX CUDA)
 
-set(CMAKE_CXX_STANDARD 20)
-#SET(CMAKE_CXX_COMPILER mpicxx)
+# 设置C++标准
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# 设置CUDA标准
+set(CMAKE_CUDA_STANDARD 11)
+set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
-# ✅ 手动添加 MS-MPI 的 include 和 lib 路径
-include_directories("C:/Program Files (x86)/Microsoft SDKs/MPI/Include")
-link_directories("C:/Program Files (x86)/Microsoft SDKs/MPI/Lib/x64")
+# 查找CUDA
+find_package(CUDA REQUIRED)
 
-# 你自己的源码文件
+# 设置CUDA架构（根据你的GPU调整）
+set(CMAKE_CUDA_ARCHITECTURES 60 61 70 75 80 86)
+
+# 包含目录
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CUDA_INCLUDE_DIRS})
+
+# 源文件
 set(SOURCES
-        guessing_MPI.cpp
-        train.cpp
-        correctness_guess_MPI.cpp
-        md5.cpp
+    main_cuda.cpp
+    guessing_cuda.cu
+    train.cpp
+    guessing.cpp
+    md5.cpp
+    # 如果需要其他源文件，请在此添加
 )
-# ⚙️ 生成可执行文件
-add_executable(GuessingMPI ${SOURCES})
 
-# 🔗 链接 MS-MPI 库
-target_link_libraries(GuessingMPI msmpi)
+# 头文件
+set(HEADERS
+    PCFG.h
+    guessing_cuda.h
+    md5.h
+    # 如果需要其他头文件，请在此添加
+)
 
+# 创建可执行文件
+add_executable(main_cuda ${SOURCES} ${HEADERS})
 
-# 如果使用 MS-MPI，建议手动设置路径（下面是可选的写法）
-# include_directories("C:/Program Files (x86)/Microsoft SDKs/MPI/Include")
-# link_directories("C:/Program Files (x86)/Microsoft SDKs/MPI/Lib/x64")
-# target_link_libraries(GuessingMPI msmpi)
+# 设置CUDA属性
+set_property(TARGET main_cuda PROPERTY CUDA_SEPARABLE_COMPILATION ON)
 
+# 链接CUDA库
+target_link_libraries(main_cuda ${CUDA_LIBRARIES})
 
+# 编译选项
+target_compile_options(main_cuda PRIVATE
+    $<$<COMPILE_LANGUAGE:CUDA>:
+        --extended-lambda
+        --expt-relaxed-constexpr
+    >
+)
 
-#find_package(Threads REQUIRED) # 查找系统上的线程库
-#
-#
-## 定义所有需要编译的源文件
-#set(SOURCE_FILES
-#        guessing_pthread_pool.cpp
-#        train.cpp
-#        correctness_guess_pool.cpp
-#        md5.cpp
-#)
-## 添加可执行文件。'main_pool' 将是你生成的可执行文件的名称。
-## ${SOURCE_FILES} 会把上面列表中的所有源文件都包含进来。
-#add_executable(correct_test ${SOURCE_FILES})
-#
-## 链接 pthreads 库。
-## 这是现代 CMake 推荐的、跨平台的方式来链接 pthreads。
-#target_link_libraries(correct_test PRIVATE Threads::Threads) # 将线程库链接到你的可执行文件
-#
-#
-## 设置源文件
-#set(MAIN_POOL_SRCS
-#        train.cpp
-#        md5.cpp
-#        guessing_pthread_pool.cpp
-#        main_pool.cpp
-#)
-#
-## 添加 main_pool 可执行文件
-#add_executable(main_pool ${MAIN_POOL_SRCS})
-## 链接 pthread 库
-#target_link_libraries(main_pool PRIVATE Threads::Threads)
-#
-#
-#
-#add_executable(main_normal
-#    main.cpp
-#    train.cpp
-#    guessing.cpp
-#    md5.cpp
-#)
-#target_link_libraries(main_normal PRIVATE Threads::Threads)
-#
-#
-#
-#add_executable(main_simd
-#    train.cpp
-#    md5.cpp
-#    guessing_pthread_pool.cpp
-#    main_pool.cpp
-#    md5_simd.cpp
-#)
-#target_link_libraries(main_normal PRIVATE Threads::Threads)
+# 如果是Debug模式，添加调试信息
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_options(main_cuda PRIVATE
+        $<$<COMPILE_LANGUAGE:CUDA>:-G -g>
+        $<$<COMPILE_LANGUAGE:CXX>:-g>
+    )
+endif()
+
+# 如果是Release模式，添加优化选项
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    target_compile_options(main_cuda PRIVATE
+        $<$<COMPILE_LANGUAGE:CUDA>:-O3>
+        $<$<COMPILE_LANGUAGE:CXX>:-O3>
+    )
+endif()
+
+# 打印一些有用的信息
+message(STATUS "CUDA Version: ${CUDA_VERSION}")
+message(STATUS "CUDA Toolkit Root Dir: ${CUDA_TOOLKIT_ROOT_DIR}")
+message(STATUS "CUDA Include Dirs: ${CUDA_INCLUDE_DIRS}")
+message(STATUS "CUDA Libraries: ${CUDA_LIBRARIES}")
+
+# 构建说明
+message(STATUS "")
+message(STATUS "构建说明:")
+message(STATUS "1. 创建构建目录: mkdir build && cd build")
+message(STATUS "2. 配置项目: cmake .. -DCMAKE_BUILD_TYPE=Release")
+message(STATUS "3. 编译项目: make 或 cmake --build .")
+message(STATUS "4. 运行程序: ./main_cuda")
+message(STATUS "")

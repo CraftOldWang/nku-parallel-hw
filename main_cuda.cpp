@@ -9,24 +9,24 @@
 using namespace std;
 using namespace chrono;
 
-// 实验配置数组，每一组包含两个参数：总生成数量和批处理大小
+// 实验配置数组
 struct ExperimentConfig {
     int generate_n;     // 猜测上限
-    int batch_size;     // 一次处理的口令数量
     const char* label;  // 实验标签
 };
 
 // 在这里定义所有要运行的实验
 const ExperimentConfig EXPERIMENTS[] = {
-    {10000000, 1000000, "CUDA数据集/小批次"},
-    {15000000, 1000000, "CUDA数据集/小批次"},
-    {20000000, 1000000, "CUDA数据集/小批次"},
-    {25000000, 1000000, "CUDA数据集/小批次"},
-    {30000000, 1000000, "CUDA数据集/小批次"},
-    {35000000, 1000000, "CUDA数据集/小批次"},
-    {40000000, 1000000, "CUDA数据集/小批次"},
-    {45000000, 1000000, "CUDA数据集/小批次"},
-    {50000000, 1000000, "CUDA数据集/小批次"},
+    {10000000, "10M Guesses"},
+    {20000000, "20M Guesses"},
+    {30000000, "30M Guesses"},
+    {40000000, "40M Guesses"},
+    {50000000, "50M Guesses"},
+    {60000000, "60M Guesses"},
+    {70000000, "70M Guesses"},
+    {80000000, "80M Guesses"},
+    {90000000, "90M Guesses"},
+    {100000000, "100M Guesses"},
 };
 
 // 要运行的实验数量
@@ -57,20 +57,19 @@ int main()
 
     // 添加时间戳
     auto now = system_clock::now();
-    auto now_time = system_clock::to_time_t(now);
-
+    time_t now_time = system_clock::to_time_t(now);
     cout << "\n--- CUDA MD5 实验批次 [" << std::ctime(&now_time) << "] ---\n";
     
     // 训练模型（只需一次）
-    PriorityQueue q;
+    PCFG pcfg;
     auto start_train = system_clock::now();
     
 #ifdef _WIN32
-    q.m.train(".\\guessdata\\Rockyou-singleLined-full.txt");
+    pcfg.train(".\\guessdata\\Rockyou-singleLined-full.txt");
 #else
-    q.m.train("/guessdata/Rockyou-singleLined-full.txt");
+    pcfg.train("/guessdata/Rockyou-singleLined-full.txt");
 #endif
-    q.m.order();
+    pcfg.order();
     auto end_train = system_clock::now();
     auto duration_train = duration_cast<microseconds>(end_train - start_train);
     double time_train = double(duration_train.count()) * microseconds::period::num / microseconds::period::den;
@@ -81,84 +80,52 @@ int main()
     for (int exp_idx = 0; exp_idx < NUM_EXPERIMENTS; exp_idx++) {
         // 获取当前实验配置
         int GENERATE_N = EXPERIMENTS[exp_idx].generate_n;
-        int NUM_PER_HASH = EXPERIMENTS[exp_idx].batch_size;
         const char* LABEL = EXPERIMENTS[exp_idx].label;
         
         cout << "\n==========================================" << endl;
         cout << "实验 #" << (exp_idx + 1) << ": " << LABEL << endl;
-        cout << "猜测上限: " << GENERATE_N << ", 批处理大小: " << NUM_PER_HASH << endl;
+        cout << "目标猜测数: " << GENERATE_N << ", 批处理阈值: " << CUDA_BATCH_THRESHOLD << endl;
         cout << "==========================================" << endl;
         
-        // 重置队列
-        q.init();
-        q.guesses.clear();
+        // 初始化CUDA优先队列
+        PriorityQueue_CUDA q(pcfg);
 
-        double time_hash = 0;  // 用于MD5哈希的时间
-        double time_guess = 0; // 哈希和猜测的总时长
+        auto start_guess = system_clock::now();
         
-        int curr_num = 0;
-        auto start = system_clock::now();
-        int history = 0;
-        
-        while (!q.priority.empty())
-        {
-            // 使用CUDA版本的PopNext
+        // 生成猜测，直到达到或超过目标数量
+        while(q.get_total_guesses() < GENERATE_N) {
             q.PopNext_CUDA();
-            q.total_guesses = q.guesses.size();
-            if (q.total_guesses - curr_num >= 100000)
-            {
-                curr_num = q.total_guesses;
-                
-                // 检查是否达到当前实验的猜测上限
-                if (history + q.total_guesses > GENERATE_N)
-                {
-                    auto end = system_clock::now();
-                    auto duration = duration_cast<microseconds>(end - start);
-                    time_guess = double(duration.count()) * microseconds::period::num / microseconds::period::den;
-                    
-                    cout << "\n--- 实验结果 ---" << endl;
-                    cout << "猜测上限: " << GENERATE_N << ", 批处理大小: " << NUM_PER_HASH << endl;
-                    cout << "Guesses generated: " << history + q.total_guesses << endl;
-                    cout << "Guess time: " << time_guess - time_hash << " seconds" << endl;
-                    cout << "Hash time: " << time_hash << " seconds" << endl;
-                    cout << "Train time: " << time_train << " seconds" << endl;
-                    cout << "Total time: " << time_guess << " seconds" << endl;
-                    cout << "-------------------" << endl;
-                    
-                    break;
-                }
-            }
-            
-            // 达到批处理大小，进行哈希计算
-            if (curr_num > NUM_PER_HASH)
-            {
-                auto start_hash = system_clock::now();
-                
-                // 使用标准MD5计算（可以考虑后续添加CUDA MD5版本）
-                bit32 state[4];
-                
-                for (string pw : q.guesses)
-                {
-                    MD5Hash(pw, state);
-                }
-                
-                // 计算哈希时间
-                auto end_hash = system_clock::now();
-                auto duration = duration_cast<microseconds>(end_hash - start_hash);
-                time_hash += double(duration.count()) * microseconds::period::num / microseconds::period::den;
-                
-                // 记录已经生成的口令总数
-                history += curr_num;
-                curr_num = 0;
-                q.guesses.clear();
+            if (q.is_empty()) { // 如果队列为空，说明无法生成更多猜测
+                cout << "警告: 优先队列已空，无法生成更多猜测。" << endl;
+                break;
             }
         }
+
+        // 处理批处理队列中剩余的所有任务
+        q.Flush_CUDA();
+
+        auto end_guess = system_clock::now();
+        auto duration_guess = duration_cast<microseconds>(end_guess - start_guess);
+        double time_guess = double(duration_guess.count()) * microseconds::period::num / microseconds::period::den;
+
+        long long final_guess_count = q.get_total_guesses();
+
+        cout << "\n--- 结果 ---" << endl;
+        cout << "总生成猜测数: " << final_guess_count << endl;
+        cout << "总生成耗时: " << fixed << setprecision(4) << time_guess << " 秒" << endl;
+        if (time_guess > 0) {
+            cout << "生成速度: " << fixed << setprecision(2) << (final_guess_count / time_guess) / 1000000.0 << " M/s" << endl;
+        }
+
+        // 可选：在这里添加MD5哈希和验证逻辑
+        // 注意：q.guesses 现在包含了所有生成的密码，可能会非常大
+        // 如果需要，可以分块处理以避免内存问题
+        cout << "(MD5哈希验证部分已在此版本中省略)" << endl;
+
+        cout << "实验 #" << (exp_idx + 1) << " 完成." << endl;
     }
-    
-    cout << "\n--- CUDA实验批次结束 ---\n" << endl;
-    
-    // 清理CUDA设备
-    cudaDeviceReset();
-    
+
+    cout << "\n所有实验完成。" << endl;
+
     return 0;
 }
