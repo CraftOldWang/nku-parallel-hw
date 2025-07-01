@@ -1,0 +1,22 @@
+Training...
+Training phase 1: reading and parsing passwords...
+Training phase 2: Ordering segment values and PTs...
+total pts18966
+Ordering letters
+Ordering digits
+ordering symbols
+here
+Guesses generated: 1017695
+Guesses generated: 2099050
+Guesses generated: 3104864
+Guesses generated: 4109725
+Guesses generated: 5187259
+Guesses generated: 6305359
+Guesses generated: 7370464
+Guesses generated: 8382935
+Guesses generated: 9383796
+Guesses generated: 10416668
+Guess time:0.444088seconds
+Hash time:5.02434seconds
+Train time:12.5143seconds
+Cracked:358115

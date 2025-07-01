@@ -1,0 +1,465 @@
+
+--- 标准 MD5 CUDA 实验批次 [Tue Jul  1 19:54:17 2025
+] ---
+Training...
+Training phase 1: reading and parsing passwords...
+Training phase 2: Ordering segment values and PTs...
+total pts18966
+Ordering letters
+Ordering digits
+ordering symbols
+time transfer gpu :0.157063
+模型训练完成，耗时: 12.554 秒
+
+==========================================
+实验 #1: 数据集/小批次
+猜测上限: 10000000, 批处理大小: 1000000
+==========================================
+time before launch one batch :0.001
+time launch one batch :0.004828
+time after launch one batch :0.344143
+time  one batch :0.350059
+
+
+time before launch one batch :0.001655
+time launch one batch :0.001402
+time after launch one batch :0.106226
+time  one batch :0.109373
+
+
+
+--- 实验结果 ---
+猜测上限: 10000000, 批处理大小: 1000000
+Guesses generated: 10106852
+Guess time: 3.67932 seconds
+Hash time: 1.13687 seconds
+Train time: 12.554 seconds
+Total time: 4.81619 seconds
+-------------------
+
+==========================================
+实验 #2: 数据集/小批次
+猜测上限: 15000000, 批处理大小: 1000000
+==========================================
+time before launch one batch :0.000962
+time launch one batch :0.004795
+time after launch one batch :0.103891
+time  one batch :0.109737
+
+
+time before launch one batch :0.002869
+time launch one batch :0.0014
+time after launch one batch :0.105663
+time  one batch :0.110011
+
+
+time before launch one batch :0.002615
+time launch one batch :0.001421
+time after launch one batch :0.104041
+time  one batch :0.108163
+
+
+
+--- 实验结果 ---
+猜测上限: 15000000, 批处理大小: 1000000
+Guesses generated: 15114795
+Guess time: 5.06921 seconds
+Hash time: 2.27017 seconds
+Train time: 12.554 seconds
+Total time: 7.33939 seconds
+-------------------
+
+==========================================
+实验 #3: 数据集/小批次
+猜测上限: 20000000, 批处理大小: 1000000
+==========================================
+time before launch one batch :0.000781
+time launch one batch :0.007116
+time after launch one batch :0.103852
+time  one batch :0.111834
+
+
+time before launch one batch :0.002819
+time launch one batch :0.0014
+time after launch one batch :0.105666
+time  one batch :0.109973
+
+
+time before launch one batch :0.00086
+time launch one batch :0.003692
+time after launch one batch :0.104026
+time  one batch :0.108664
+
+
+time before launch one batch :0.000762
+time launch one batch :0.004136
+time after launch one batch :0.103712
+time  one batch :0.108703
+
+
+
+--- 实验结果 ---
+猜测上限: 20000000, 批处理大小: 1000000
+Guesses generated: 20124430
+Guess time: 6.7658 seconds
+Hash time: 3.38944 seconds
+Train time: 12.554 seconds
+Total time: 10.1552 seconds
+-------------------
+
+==========================================
+实验 #4: 数据集/小批次
+猜测上限: 25000000, 批处理大小: 1000000
+==========================================
+time before launch one batch :0.000852
+time launch one batch :0.004807
+time after launch one batch :0.103915
+time  one batch :0.109658
+
+
+time before launch one batch :0.001197
+time launch one batch :0.001405
+time after launch one batch :0.10562
+time  one batch :0.108311
+
+
+time before launch one batch :0.00157
+time launch one batch :0.001415
+time after launch one batch :0.10364
+time  one batch :0.106706
+
+
+time before launch one batch :0.00111
+time launch one batch :0.001828
+time after launch one batch :0.102931
+time  one batch :0.105956
+
+
+time before launch one batch :0.000801
+time launch one batch :0.003813
+time after launch one batch :0.106712
+time  one batch :0.111409
+
+
+
+--- 实验结果 ---
+猜测上限: 25000000, 批处理大小: 1000000
+Guesses generated: 25153156
+Guess time: 8.35644 seconds
+Hash time: 4.50813 seconds
+Train time: 12.554 seconds
+Total time: 12.8646 seconds
+-------------------
+
+==========================================
+实验 #5: 数据集/小批次
+猜测上限: 30000000, 批处理大小: 1000000
+==========================================
+time before launch one batch :0.002905
+time launch one batch :0.004805
+time after launch one batch :0.103942
+time  one batch :0.111742
+
+
+time before launch one batch :0.002863
+time launch one batch :0.001402
+time after launch one batch :0.105493
+time  one batch :0.109842
+
+
+time before launch one batch :0.000834
+time launch one batch :0.00142
+time after launch one batch :0.103804
+time  one batch :0.106136
+
+
+time before launch one batch :0.002811
+time launch one batch :0.001832
+time after launch one batch :0.102848
+time  one batch :0.107584
+
+
+time before launch one batch :0.000793
+time launch one batch :0.003838
+time after launch one batch :0.106383
+time  one batch :0.111108
+
+
+time before launch one batch :0.002338
+time launch one batch :0.001278
+time after launch one batch :0.104637
+time  one batch :0.108332
+
+
+
+--- 实验结果 ---
+猜测上限: 30000000, 批处理大小: 1000000
+Guesses generated: 30178487
+Guess time: 10.2024 seconds
+Hash time: 5.6767 seconds
+Train time: 12.554 seconds
+Total time: 15.8791 seconds
+-------------------
+
+==========================================
+实验 #6: 数据集/小批次
+猜测上限: 35000000, 批处理大小: 1000000
+==========================================
+time before launch one batch :0.000841
+time launch one batch :0.00696
+time after launch one batch :0.103113
+time  one batch :0.111011
+
+
+time before launch one batch :0.000798
+time launch one batch :0.003696
+time after launch one batch :0.104835
+time  one batch :0.109426
+
+
+time before launch one batch :0.000781
+time launch one batch :0.003716
+time after launch one batch :0.103985
+time  one batch :0.108566
+
+
+time before launch one batch :0.000843
+time launch one batch :0.004134
+time after launch one batch :0.102298
+time  one batch :0.107366
+
+
+time before launch one batch :0.001838
+time launch one batch :0.001533
+time after launch one batch :0.106415
+time  one batch :0.109874
+
+
+time before launch one batch :0.001314
+time launch one batch :0.001283
+time after launch one batch :0.104621
+time  one batch :0.107305
+
+
+time before launch one batch :0.001092
+time launch one batch :0.001306
+time after launch one batch :0.104611
+time  one batch :0.107092
+
+
+
+--- 实验结果 ---
+猜测上限: 35000000, 批处理大小: 1000000
+Guesses generated: 35246582
+Guess time: 11.744 seconds
+Hash time: 6.75866 seconds
+Train time: 12.554 seconds
+Total time: 18.5027 seconds
+-------------------
+
+==========================================
+实验 #7: 数据集/小批次
+猜测上限: 40000000, 批处理大小: 1000000
+==========================================
+time before launch one batch :0.000841
+time launch one batch :0.00481
+time after launch one batch :0.103575
+time  one batch :0.109326
+
+
+time before launch one batch :0.000845
+time launch one batch :0.001402
+time after launch one batch :0.104741
+time  one batch :0.107094
+
+
+time before launch one batch :0.000815
+time launch one batch :0.001424
+time after launch one batch :0.103439
+time  one batch :0.105765
+
+
+time before launch one batch :0.00075
+time launch one batch :0.004142
+time after launch one batch :0.102747
+time  one batch :0.107715
+
+
+time before launch one batch :0.000847
+time launch one batch :0.003819
+time after launch one batch :0.106223
+time  one batch :0.110984
+
+
+time before launch one batch :0.000829
+time launch one batch :0.003576
+time after launch one batch :0.104102
+time  one batch :0.108595
+
+
+time before launch one batch :0.002857
+time launch one batch :0.001305
+time after launch one batch :0.10408
+time  one batch :0.108337
+
+
+time before launch one batch :0.000777
+time launch one batch :0.003712
+time after launch one batch :0.104344
+time  one batch :0.108918
+
+
+
+--- 实验结果 ---
+猜测上限: 40000000, 批处理大小: 1000000
+Guesses generated: 40254860
+Guess time: 13.381 seconds
+Hash time: 7.91878 seconds
+Train time: 12.554 seconds
+Total time: 21.2998 seconds
+-------------------
+
+==========================================
+实验 #8: 数据集/小批次
+猜测上限: 45000000, 批处理大小: 1000000
+==========================================
+time before launch one batch :0.001066
+time launch one batch :0.004801
+time after launch one batch :0.102985
+time  one batch :0.108938
+
+
+time before launch one batch :0.000823
+time launch one batch :0.003672
+time after launch one batch :0.104899
+time  one batch :0.109495
+
+
+time before launch one batch :0.002515
+time launch one batch :0.001415
+time after launch one batch :0.103102
+time  one batch :0.107116
+
+
+time before launch one batch :0.000783
+time launch one batch :0.004142
+time after launch one batch :0.101925
+time  one batch :0.10694
+
+
+time before launch one batch :0.000815
+time launch one batch :0.003822
+time after launch one batch :0.105964
+time  one batch :0.110688
+
+
+time before launch one batch :0.002534
+time launch one batch :0.001285
+time after launch one batch :0.103644
+time  one batch :0.107541
+
+
+time before launch one batch :0.000837
+time launch one batch :0.001306
+time after launch one batch :0.103795
+time  one batch :0.10602
+
+
+time before launch one batch :0.001169
+time launch one batch :0.001387
+time after launch one batch :0.10422
+time  one batch :0.106848
+
+
+time before launch one batch :0.000794
+time launch one batch :0.003828
+time after launch one batch :0.103087
+time  one batch :0.107795
+
+
+
+--- 实验结果 ---
+猜测上限: 45000000, 批处理大小: 1000000
+Guesses generated: 45279316
+Guess time: 14.6865 seconds
+Hash time: 9.034 seconds
+Train time: 12.554 seconds
+Total time: 23.7205 seconds
+-------------------
+
+==========================================
+实验 #9: 数据集/小批次
+猜测上限: 50000000, 批处理大小: 1000000
+==========================================
+time before launch one batch :0.002091
+time launch one batch :0.004801
+time after launch one batch :0.103881
+time  one batch :0.110856
+
+
+time before launch one batch :0.001129
+time launch one batch :0.001401
+time after launch one batch :0.104289
+time  one batch :0.106903
+
+
+time before launch one batch :0.000842
+time launch one batch :0.003724
+time after launch one batch :0.104521
+time  one batch :0.109173
+
+
+time before launch one batch :0.00077
+time launch one batch :0.004152
+time after launch one batch :0.102967
+time  one batch :0.107973
+
+
+time before launch one batch :0.00288
+time launch one batch :0.001524
+time after launch one batch :0.106113
+time  one batch :0.110596
+
+
+time before launch one batch :0.000773
+time launch one batch :0.003591
+time after launch one batch :0.105055
+time  one batch :0.109531
+
+
+time before launch one batch :0.000824
+time launch one batch :0.003601
+time after launch one batch :0.104501
+time  one batch :0.109008
+
+
+time before launch one batch :0.001417
+time launch one batch :0.00139
+time after launch one batch :0.103905
+time  one batch :0.106805
+
+
+time before launch one batch :0.003005
+time launch one batch :0.001535
+time after launch one batch :0.103593
+time  one batch :0.108217
+
+
+time before launch one batch :0.00078
+time launch one batch :0.003913
+time after launch one batch :0.104095
+time  one batch :0.10887
+
+
+
+--- 实验结果 ---
+猜测上限: 50000000, 批处理大小: 1000000
+Guesses generated: 50287140
+Guess time: 16.5316 seconds
+Hash time: 10.1928 seconds
+Train time: 12.554 seconds
+Total time: 26.7243 seconds
+-------------------
+
+--- 实验批次结束 ---
+

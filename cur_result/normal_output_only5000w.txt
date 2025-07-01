@@ -1,0 +1,28 @@
+
+--- 标准 MD5 实验批次 [Tue Jul  1 23:22:58 2025
+] ---
+Training...
+Training phase 1: reading and parsing passwords...
+Training phase 2: Ordering segment values and PTs...
+total pts18966
+Ordering letters
+Ordering digits
+ordering symbols
+模型训练完成，耗时: 12.4709 秒
+
+==========================================
+实验 #1: 数据集/小批次
+猜测上限: 50000000, 批处理大小: 1000000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 50000000, 批处理大小: 1000000
+Guesses generated: 50080854
+Guess time: 1.84692 seconds
+Hash time: 10.9616 seconds
+Train time: 12.4709 seconds
+Total time: 12.8085 seconds
+-------------------
+
+--- 实验批次结束 ---
+

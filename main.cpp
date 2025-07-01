@@ -3,11 +3,16 @@
 #include "md5.h"
 #include <iomanip>
 #include "config.h"
+#include <iostream>
+#include <vector>
+#include <string>
+// #include "guessing_cuda.h" // 包含猜测相关的CUDA实现
+#include "PCFG.h" // 包含PCFG相关的类和函数
 
 // 如果定义了使用SIMD，则包含SIMD头文件
-#ifdef USING_SIMD
-#include "md5_simd.h"
-#endif
+// #ifdef USING_SIMD
+// #include "md5_simd.h"
+// #endif
 
 using namespace std;
 using namespace chrono;
@@ -42,7 +47,7 @@ const int NUM_EXPERIMENTS = sizeof(EXPERIMENTS) / sizeof(EXPERIMENTS[0]);
 
 int main()
 {
-    system("chcp 65001 > nul");
+    // system("chcp 65001 > nul");
 
     // 添加时间戳
     auto now = system_clock::now();
@@ -69,7 +74,7 @@ int main()
 #ifdef _WIN32
     q.m.train(".\\guessdata\\Rockyou-singleLined-full.txt");
 #else
-    q.m.train("/guessdata/Rockyou-singleLined-full.txt");
+    q.m.train("./guessdata/Rockyou-singleLined-full.txt");
 #endif
     q.m.order();
     auto end_train = system_clock::now();

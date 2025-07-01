@@ -33,7 +33,6 @@ struct Taskcontent{
     int* prefix_lens; // 每个prefix的长度
     int* seg_value_counts; // 每个segment的value数量
 
-    // 新增：输出偏移数组
     int* output_offsets;  // 每个task在输出buffer中的起始位置
 
     int taskcount;
@@ -57,25 +56,34 @@ public:
     void launch_gpu_kernel(vector<string>& guesses, PriorityQueue& q);
     void clean();
     void print();
-    
+    void init_length_maps(PriorityQueue& q);
+
+private:
+    // 添加长度到ID的映射表
+    unordered_map<int, int> letter_length_to_id;
+    unordered_map<int, int> digit_length_to_id;
+    unordered_map<int, int> symbol_length_to_id;
+    bool maps_initialized = false;
 };
 
-
+// 最后没用上
 // 用二分查找找 taskid 的函数（不一定会用上）
-__device__ int find_task_id(int guess_id, int* cumulative_offsets, int task_count) {
-    int left = 0, right = task_count - 1;
-    while (left <= right) {
-        int mid = (left + right) / 2;
-        if (guess_id >= cumulative_offsets[mid] && guess_id < cumulative_offsets[mid + 1]) {
-            return mid;
-        } else if (guess_id < cumulative_offsets[mid]) {
-            right = mid - 1;  
-        } else {
-            left = mid + 1;
-        }
-    }
-    return task_count - 1; // 安全返回
-}
+// __device__ int find_task_id(int guess_id, int* cumulative_offsets, int task_count) {
+//     int left = 0, right = task_count - 1;
+//     while (left <= right) {
+//         int mid = (left + right) / 2;
+//         if (guess_id >= cumulative_offsets[mid] && guess_id < cumulative_offsets[mid + 1]) {
+//             return mid;
+//         } else if (guess_id < cumulative_offsets[mid]) {
+//             right = mid - 1;  
+//         } else {
+//             left = mid + 1;
+//         }
+//     }
+//     return task_count - 1; // 安全返回
+// }
+
+
 
 // 生成猜测的 kernal 函数 。生成的猜测放到 d_guess_buffer 上
 __global__ void generate_guesses_kernel(
