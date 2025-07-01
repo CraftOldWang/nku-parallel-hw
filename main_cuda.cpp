@@ -4,7 +4,6 @@
 #include <iomanip>
 #include "config.h"
 #include "guessing_cuda.h"
-#include <cuda_runtime.h>
 
 // 如果定义了使用SIMD，则包含SIMD头文件
 #ifdef USING_SIMD
@@ -47,6 +46,7 @@ const int NUM_EXPERIMENTS = sizeof(EXPERIMENTS) / sizeof(EXPERIMENTS[0]);
 int main()
 {
     system("chcp 65001 > nul");
+    task_manager = new TaskManager();
 
     // 添加时间戳
     auto now = system_clock::now();
@@ -200,7 +200,12 @@ int main()
                 q.guesses.clear();
             }
         }
+
+        // 如果还有任务，就清除...(不过我没用异步，所以不至于)
+        task_manager->clean();
     }
+
+    clean_gpu_ordered_values_data(gpu_data);
     
     cout << "\n--- 实验批次结束 ---\n" << endl;
     return 0;
