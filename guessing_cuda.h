@@ -5,7 +5,9 @@
 #include <numeric> // for std::accumulate
 #include <device_launch_parameters.h>
 
+#include "config.h"
 
+// GPU上用于查找的 ordered_values 数据结构
 struct GpuOrderedValuesData{
     char* letter_all_values;// 把各个segment 的ordered_values展平
     char* digit_all_values;
@@ -21,11 +23,8 @@ struct GpuOrderedValuesData{
 };
 
 
-
-
-// 如果有其他CUDA函数也在此声明
-
-struct Taskcontent{ // 包含了任务内容
+// 给GPU用的 一批任务 。包含了生成guess所需的数据
+struct Taskcontent{ 
     int* seg_types; // 1: letter, 2: digit, 3: symbol (0:未设置)
     int* seg_ids;   // 对应在 model 里的 三个vector 的下标
     int* seg_lens;
@@ -33,6 +32,10 @@ struct Taskcontent{ // 包含了任务内容
     int* prefix_offsets;
     int* prefix_lens; // 每个prefix的长度
     int* seg_value_counts; // 每个segment的value数量
+
+    // 新增：输出偏移数组
+    int* output_offsets;  // 每个task在输出buffer中的起始位置
+
     int taskcount;
     int guesscount; // 到10_0000了就会丢给核函数去执行
 };
@@ -49,13 +52,10 @@ public:
     int taskcount;
     int guesscount; // 到10_0000了就会丢给核函数去执行
 
-
-    
     TaskManager(): taskcount(0), guesscount(0){}// vector 自己会调自己的构造..
     void add_task(segment* seg, string prefix, PriorityQueue& q);
-    void launch_gpu_kernel(vector<string>& guesses);
+    void launch_gpu_kernel(vector<string>& guesses, PriorityQueue& q);
     void clean();
-
     void print();
     
 };
