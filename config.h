@@ -7,7 +7,7 @@
 
 // #define USING_SIMD // 定义宏以启用SIMD MD5计算
 
-#define USING_MPI // 定义宏以启用MPI并行处理
+// #define USING_MPI // 定义宏以启用MPI并行处理
 
 // #define USING_SMALL
 // #define THREAD_NUM 8 // 线程池的线程数

@@ -1,4 +1,5 @@
 #include "PCFG.h"
+#include "guessing_cuda.h"
 using namespace std;
 
 void PriorityQueue::CalProb(PT &pt)

@@ -1,289 +1,179 @@
-#include "guessing_cuda.h"
 #include "PCFG.h"
-#include "config.h"
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include <vector>
 #include <string>
-#include <iostream>
-#include <numeric>
-
+#include "guessing_cuda.h"  // 包含头文件
 using namespace std;
 
-// Device function for upper_bound (binary search). Finds the first element > val.
-__device__ int upper_bound_device(const int* arr, int n, int val) {
-    int low = 0;
-    int high = n;
-    while (low < high) {
-        int mid = low + (high - low) / 2;
-        if (val >= arr[mid]) {
-            low = mid + 1;
-        } else {
-            high = mid;
-        }
-    }
-    return low;
-}
+// vector<segment> letters;
+// vector<segment> digits;
+// vector<segment> symbols;
+// 把所有segment的ordered_values放在一个全局变量中
+// vector<string> ordered_values;
+// 偏移，某个指针
+// 某一个int 数字， 对应
+// 只需要 给一个seg->给出对应的下标 , 这个下标（int的） 直接在gpu 那里也能用
+GpuOrderedValuesData* gpu_data = nullptr;
 
-// Unified CUDA kernel for batch processing
-__global__ void generateGuessesKernel_Batch(
-    // Task metadata
-    int num_tasks,
-    const int* task_offsets, // Cumulative guess counts, e.g., [0, 100, 150, ...]
 
-    // Flattened data for all tasks
-    const char* all_prefixes,
-    const int* prefix_lengths,
-    const int* prefix_offsets,
-    const char* all_values,
-    const int* value_lengths,
-    const int* value_offsets_flat,
-    const int* task_value_offsets, // Maps task_idx to the start of its values in the value arrays
-
-    // Output buffers
-    char* result_buffer,
-    int* result_lengths,
-    int max_guess_length
+__global__ void generate_guesses_kernel(
+    GpuOrderedValuesData* gpu_data,
+    int* segment_offsets,
+    int segment_count,
+    int* output_guesses,
+    int* output_count
 ) {
-    int global_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (global_idx >= task_offsets[num_tasks]) {
-        return;
-    }
-
-    // 1. Find the task this thread belongs to using binary search
-    int task_idx = upper_bound_device(task_offsets, num_tasks + 1, global_idx) - 1;
-
-    // 2. Calculate the index within the task's value segment
-    int local_idx = global_idx - task_offsets[task_idx];
-
-    // 3. Get prefix info
-    int prefix_len = prefix_lengths[task_idx];
-    int prefix_start = prefix_offsets[task_idx];
-
-    // 4. Get value info
-    int value_block_start_idx = task_value_offsets[task_idx];
-    int global_value_idx = value_block_start_idx + local_idx;
-    int value_len = value_lengths[global_value_idx];
-    int value_start = value_offsets_flat[global_value_idx];
-
-    // 5. Assemble the guess string in the result buffer
-    int result_start_pos = global_idx * max_guess_length;
-    int current_pos = result_start_pos;
-
-    // Copy prefix
-    for (int i = 0; i < prefix_len; i++) {
-        result_buffer[current_pos++] = all_prefixes[prefix_start + i];
-    }
-
-    // Copy value
-    for (int i = 0; i < value_len; i++) {
-        result_buffer[current_pos++] = all_values[value_start + i];
-    }
-
-    // Set final length
-    result_lengths[global_idx] = prefix_len + value_len;
+    // 这里实现具体的kernel逻辑
+    // 需要根据gpu_data中的数据生成相应的guesses
+    // 注意：这里只是一个示例，具体实现需要根据实际需求来编写
 }
 
 
-// --- CUDABatchManager Implementation ---
+void init_gpu_ordered_values_data(
+    GpuOrderedValuesData* d_gpu_data,
+    PriorityQueue& q
+) {
 
-CUDABatchManager::CUDABatchManager(vector<string>& guesses_ref, long long& total_guesses_ref)
-    : guesses(guesses_ref), total_guesses(total_guesses_ref) {}
+    // 计算char*数组总长度
+    size_t total_letter_length = 0;
+    size_t total_digit_length = 0;
+    size_t total_symbol_length = 0;
 
-CUDABatchManager::~CUDABatchManager() {
-    if (!tasks.empty()) {
-        flush();
+    // 有多少个不同类型的 value
+    size_t letter_offsetarr_length = 0;
+    size_t digit_offsetarr_length = 0;
+    size_t symbol_offsetarr_length = 0;
+
+    char* letter_all_values = nullptr;// 把各个segment 的ordered_values展平
+    char* digit_all_values= nullptr;
+    char* symbol_all_values= nullptr;
+
+    int* letter_value_offsets= nullptr; // 每个ordered_value在letter_all_values中的起始
+    int* digits_value_offsets= nullptr; // 每个ordered_value在digit_all_values中的起始位置
+    int* symbol_value_offsets= nullptr; // 每个ordered_value在symbol_all_values中的起始
+
+    int* letter_seg_offsets= nullptr; // 每个letter segment第一个ordered_value在value_offsets中的是哪
+    int* digit_seg_offsets= nullptr; // 每个digit segment第一个ordered_value在value_offsets中的是哪个
+    int* symbol_seg_offsets= nullptr; // 每个symbol segment第一个ordered_value在value_offsets
+
+    for (const auto& seg : q.m.letters) {
+        total_letter_length += seg.ordered_values.size() * seg.length;
+        letter_offsetarr_length += seg.ordered_values.size();
     }
-}
-
-void CUDABatchManager::addTask(const GuessTask& task) {
-    tasks.push_back(task);
-    if (tasks.size() >= CUDA_BATCH_THRESHOLD) {
-        flush();
+    for (const auto& seg : q.m.digits) {
+        total_digit_length += seg.ordered_values.size()* seg.length;
+        digit_offsetarr_length += seg.ordered_values.size();
     }
-}
-
-void CUDABatchManager::flush() {
-    if (tasks.empty()) {
-        return;
+    for (const auto& seg : q.m.symbols) {
+        total_symbol_length += seg.ordered_values.size()* seg.length;
+        symbol_offsetarr_length += seg.ordered_values.size();
     }
 
-    // --- 1. Flatten Data on CPU ---
-    vector<int> h_prefix_lengths, h_prefix_offsets;
-    vector<char> h_all_prefixes;
+    letter_all_values = new char[total_letter_length];
+    letter_value_offsets = new int[letter_offsetarr_length+1];
+    letter_seg_offsets = new int[q.m.letters.size()+1];
 
-    vector<int> h_value_lengths, h_value_offsets_flat, h_task_value_offsets;
-    vector<char> h_all_values;
-    
-    vector<int> h_task_offsets; // Cumulative guess counts for kernel indexing
-    int total_guess_count = 0;
+    digit_all_values = new char[total_digit_length];
+    digits_value_offsets = new int[digit_offsetarr_length+1];
+    digit_seg_offsets = new int[q.m.digits.size()+1];
 
-    int current_prefix_offset = 0;
-    int current_value_block_offset = 0; // The start index for the current task's values
-    int current_flat_value_offset = 0;  // The start position for the current value string in h_all_values
+    symbol_all_values = new char[total_symbol_length];
+    symbol_value_offsets = new int[symbol_offsetarr_length+1];
+    symbol_seg_offsets = new int[q.m.symbols.size()+1]; 
+    // 多补了一个offset 来表示末尾，实际不对应segment 以及 value
 
-    h_task_offsets.push_back(0);
+    int value_offset = 0;
+    int seg_offset  = 0;
 
-    for (const auto& task : tasks) {
-        // Prefix
-        h_prefix_lengths.push_back(task.prefix.length());
-        h_prefix_offsets.push_back(current_prefix_offset);
-        h_all_prefixes.insert(h_all_prefixes.end(), task.prefix.begin(), task.prefix.end());
-        current_prefix_offset += task.prefix.length();
-
-        // Values
-        h_task_value_offsets.push_back(current_value_block_offset);
-        for(int i = 0; i < task.max_indices; ++i) {
-            const string& val = task.ordered_values_ptr->at(i);
-            h_value_lengths.push_back(val.length());
-            h_value_offsets_flat.push_back(current_flat_value_offset);
-            h_all_values.insert(h_all_values.end(), val.begin(), val.end());
-            current_flat_value_offset += val.length();
+    for(int i = 0 ;i < q.m.letters.size() ;i++) {
+        letter_seg_offsets[i] = seg_offset;
+        const auto& seg = q.m.letters[i];
+        for (int j =0 ;j < seg.ordered_values.size();j++ ){
+            letter_value_offsets[seg_offset++] = value_offset;
+            string value = seg.ordered_values[j];
+            for(int k =0; k < value.length(); k++) {
+                letter_all_values[value_offset++] = value[k];
+            }
         }
-        current_value_block_offset += task.max_indices;
-
-        // Task offsets (cumulative guess count)
-        total_guess_count += task.max_indices;
-        h_task_offsets.push_back(total_guess_count);
     }
+    letter_seg_offsets[q.m.letters.size()] = seg_offset; // 最后补一下...其实对应长度为0
+    letter_value_offsets[letter_offsetarr_length] = value_offset;
+    seg_offset = 0;
+    value_offset = 0;
 
-    // --- 2. Allocate and Copy Memory to GPU ---
-    int* d_task_offsets;
-    cudaMalloc(&d_task_offsets, h_task_offsets.size() * sizeof(int));
-    cudaMemcpy(d_task_offsets, h_task_offsets.data(), h_task_offsets.size() * sizeof(int), cudaMemcpyHostToDevice);
-
-    char* d_all_prefixes;
-    cudaMalloc(&d_all_prefixes, h_all_prefixes.size() * sizeof(char));
-    cudaMemcpy(d_all_prefixes, h_all_prefixes.data(), h_all_prefixes.size() * sizeof(char), cudaMemcpyHostToDevice);
-
-    int* d_prefix_lengths;
-    cudaMalloc(&d_prefix_lengths, h_prefix_lengths.size() * sizeof(int));
-    cudaMemcpy(d_prefix_lengths, h_prefix_lengths.data(), h_prefix_lengths.size() * sizeof(int), cudaMemcpyHostToDevice);
-
-    int* d_prefix_offsets;
-    cudaMalloc(&d_prefix_offsets, h_prefix_offsets.size() * sizeof(int));
-    cudaMemcpy(d_prefix_offsets, h_prefix_offsets.data(), h_prefix_offsets.size() * sizeof(int), cudaMemcpyHostToDevice);
-
-    char* d_all_values;
-    cudaMalloc(&d_all_values, h_all_values.size() * sizeof(char));
-    cudaMemcpy(d_all_values, h_all_values.data(), h_all_values.size() * sizeof(char), cudaMemcpyHostToDevice);
-
-    int* d_value_lengths;
-    cudaMalloc(&d_value_lengths, h_value_lengths.size() * sizeof(int));
-    cudaMemcpy(d_value_lengths, h_value_lengths.data(), h_value_lengths.size() * sizeof(int), cudaMemcpyHostToDevice);
-
-    int* d_value_offsets_flat;
-    cudaMalloc(&d_value_offsets_flat, h_value_offsets_flat.size() * sizeof(int));
-    cudaMemcpy(d_value_offsets_flat, h_value_offsets_flat.data(), h_value_offsets_flat.size() * sizeof(int), cudaMemcpyHostToDevice);
-
-    int* d_task_value_offsets;
-    cudaMalloc(&d_task_value_offsets, h_task_value_offsets.size() * sizeof(int));
-    cudaMemcpy(d_task_value_offsets, h_task_value_offsets.data(), h_task_value_offsets.size() * sizeof(int), cudaMemcpyHostToDevice);
-
-    // Output buffers
-    char* d_result_buffer;
-    int* d_result_lengths;
-    cudaMalloc(&d_result_buffer, total_guess_count * CUDA_MAX_GUESS_LENGTH * sizeof(char));
-    cudaMalloc(&d_result_lengths, total_guess_count * sizeof(int));
-
-    // --- 3. Launch Kernel ---
-    int blockSize = CUDA_BLOCK_SIZE;
-    int gridSize = (total_guess_count + blockSize - 1) / blockSize;
-    
-    generateGuessesKernel_Batch<<<gridSize, blockSize>>>(
-        tasks.size(), d_task_offsets,
-        d_all_prefixes, d_prefix_lengths, d_prefix_offsets,
-        d_all_values, d_value_lengths, d_value_offsets_flat, d_task_value_offsets,
-        d_result_buffer, d_result_lengths, CUDA_MAX_GUESS_LENGTH
-    );
-    cudaDeviceSynchronize();
-
-    // --- 4. Copy Results Back to Host ---
-    vector<char> h_result_buffer(total_guess_count * CUDA_MAX_GUESS_LENGTH);
-    vector<int> h_result_lengths(total_guess_count);
-    cudaMemcpy(h_result_buffer.data(), d_result_buffer, h_result_buffer.size() * sizeof(char), cudaMemcpyDeviceToHost);
-    cudaMemcpy(h_result_lengths.data(), d_result_lengths, h_result_lengths.size() * sizeof(int), cudaMemcpyDeviceToHost);
-
-    // --- 5. Process Results ---
-    guesses.reserve(guesses.size() + total_guess_count);
-    for (int i = 0; i < total_guess_count; ++i) {
-        guesses.emplace_back(h_result_buffer.data() + i * CUDA_MAX_GUESS_LENGTH, h_result_lengths[i]);
-    }
-    total_guesses += total_guess_count;
-
-    // --- 6. Cleanup GPU Memory ---
-    cudaFree(d_task_offsets);
-    cudaFree(d_all_prefixes);
-    cudaFree(d_prefix_lengths);
-    cudaFree(d_prefix_offsets);
-    cudaFree(d_all_values);
-    cudaFree(d_value_lengths);
-    cudaFree(d_value_offsets_flat);
-    cudaFree(d_task_value_offsets);
-    cudaFree(d_result_buffer);
-    cudaFree(d_result_lengths);
-
-    // --- 7. Clear CPU Task Buffer ---
-    tasks.clear();
-}
-
-
-// --- PriorityQueue_CUDA Implementation ---
-
-PriorityQueue_CUDA::PriorityQueue_CUDA(PCFG &pcfg)
-    : m(pcfg), batchManager(guesses, total_guesses), total_guesses(0) {
-    priority = pcfg.get_initial_PT();
-}
-
-PriorityQueue_CUDA::~PriorityQueue_CUDA() {
-    // The batchManager's destructor will handle any remaining tasks.
-}
-
-void PriorityQueue_CUDA::PopNext_CUDA() {
-    if (priority.empty()) {
-        return;
-    }
-    
-    PT pt = priority.front();
-    CalProb(pt); // Ensure probability is calculated
-
-    GuessTask task;
-    segment* last_segment;
-
-    if (pt.content.size() == 1) {
-        task.prefix = "";
-    } else {
-        string p_str;
-        for (size_t i = 0; i < pt.content.size() - 1; ++i) {
-            p_str += m.get_segment_value(pt.content[i], pt.curr_indices[i]);
+    for (int i=0;i< q.m.digits.size();i++) {
+        digit_seg_offsets[i] = seg_offset;
+        const auto& seg = q.m.digits[i];
+        seg_offset += seg.ordered_values.size();
+        for (int j=0; j< seg.ordered_values.size();j++ ) {
+            digits_value_offsets[seg_offset++] = value_offset;
+            string value = seg.ordered_values[j];
+            for(int k = 0;k < value.length(); k++) {
+                digit_all_values[value_offset++] = value[k];
+            }
         }
-        task.prefix = p_str;
     }
+    digit_seg_offsets[q.m.digits.size()] = seg_offset; // 最后补一下...其实对应长度为0
+    digits_value_offsets[digit_offsetarr_length] = value_offset;
+    seg_offset = 0;
+    value_offset = 0;   
 
-    const auto& last_seg_info = pt.content.back();
-    if (last_seg_info.type == 1) last_segment = &m.letters[m.FindLetter(last_seg_info)];
-    else if (last_seg_info.type == 2) last_segment = &m.digits[m.FindDigit(last_seg_info)];
-    else last_segment = &m.symbols[m.FindSymbol(last_seg_info)];
 
-    task.ordered_values_ptr = &last_segment->ordered_values;
-    task.max_indices = pt.max_indices.back();
-
-    batchManager.addTask(task);
-
-    // Generate new PTs and update priority queue (CPU-side logic)
-    vector<PT> new_pts = priority.front().NewPTs();
-    priority.erase(priority.begin());
-    for (PT new_pt : new_pts) {
-        CalProb(new_pt);
-        auto it = std::lower_bound(priority.begin(), priority.end(), new_pt, 
-            [](const PT& a, const PT& b) {
-            return a.prob > b.prob;
-        });
-        priority.insert(it, new_pt);
+    for (int i=0;i< q.m.symbols.size();i++) {
+        symbol_seg_offsets[i] = seg_offset;
+        const auto& seg = q.m.symbols[i];
+        seg_offset += seg.ordered_values.size();
+        for (int j=0; j< seg.ordered_values.size();j++ ) {
+            symbol_value_offsets[seg_offset++] = value_offset;
+            string value = seg.ordered_values[j];
+            for(int k = 0;k < value.length(); k++) {
+                symbol_all_values[value_offset++] = value[k];
+            }
+        }
     }
+    symbol_seg_offsets[q.m.symbols.size()] = seg_offset; // 最后补一下
+    symbol_value_offsets[symbol_offsetarr_length] = value_offset;
+
+
+
+    // 相关东西都要的是地址。。。。。。。 指针只是指针， 解释成cpu or gpu 的内存 ，是看具体情景
+    // 比如cudaMemcpy 用cudaMemcpyKind kind 来区分。
+
+    GpuOrderedValuesData h_gpu_data;
+    //把各个指针相应数据复制到gpu上
+
+    // 分配内存 以及复制
+    cudaMalloc(&h_gpu_data.letter_all_values, total_letter_length * sizeof(char));
+    cudaMalloc(&h_gpu_data.digit_all_values, total_digit_length * sizeof(char));
+    cudaMalloc(&h_gpu_data.symbol_all_values, total_symbol_length * sizeof(char));
+    cudaMemcpy(h_gpu_data.letter_all_values, letter_all_values, total_letter_length * sizeof(char), cudaMemcpyHostToDevice);
+    cudaMemcpy(h_gpu_data.digit_all_values, digit_all_values, total_digit_length * sizeof(char), cudaMemcpyHostToDevice);
+    cudaMemcpy(h_gpu_data.symbol_all_values, symbol_all_values, total_symbol_length * sizeof(char), cudaMemcpyHostToDevice);
+
+    // 分配偏移数组 以及复制
+    cudaMalloc(&h_gpu_data.letter_value_offsets, (letter_offsetarr_length+1)* sizeof(int));
+    cudaMalloc(&h_gpu_data.digits_value_offsets, (digit_offsetarr_length+1) * sizeof(int));
+    cudaMalloc(&h_gpu_data.symbol_value_offsets, (symbol_offsetarr_length+1) * sizeof(int));
+    cudaMemcpy(h_gpu_data.letter_value_offsets, letter_value_offsets, (letter_offsetarr_length+1)* sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(h_gpu_data.digits_value_offsets, digits_value_offsets, (digit_offsetarr_length+1) * sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(h_gpu_data.symbol_value_offsets, symbol_value_offsets, (symbol_offsetarr_length+1) * sizeof(int), cudaMemcpyHostToDevice);
+
+
+    // 分配segment偏移数组 以及复制
+    cudaMalloc(&h_gpu_data.letter_seg_offsets, q.m.letters.size() * sizeof(int));
+    cudaMalloc(&h_gpu_data.digit_seg_offsets, q.m.digits.size() * sizeof(int));
+    cudaMalloc(&h_gpu_data.symbol_seg_offsets, q.m.symbols.size() * sizeof(int));
+    cudaMemcpy(h_gpu_data.letter_seg_offsets, letter_seg_offsets, q.m.letters.size() * sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(h_gpu_data.digit_seg_offsets, digit_seg_offsets, q.m.digits.size() * sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(h_gpu_data.symbol_seg_offsets, symbol_seg_offsets, q.m.symbols.size() * sizeof(int), cudaMemcpyHostToDevice);
+
+
+    //把结构体复制到gpu上
+    cudaMalloc(&d_gpu_data, sizeof(GpuOrderedValuesData));
+    cudaMemcpy(d_gpu_data, &h_gpu_data, sizeof(GpuOrderedValuesData), cudaMemcpyHostToDevice);
+
 }
 
-void PriorityQueue_CUDA::Flush_CUDA() {
-    batchManager.flush();
-}
+
 

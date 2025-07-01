@@ -16,7 +16,8 @@ install_manifest.txt/
 .idea/
 cmake-build-debug/
 cmake-build-release/
-
+cmake-build-release-visual-studio/
+cmake-build-debug-visual-studio/
 
 # --- 编译产物 ---
 # ---*.o 这个我们做实验返回的。。。还是要同步到本地 ---
