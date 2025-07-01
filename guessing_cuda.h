@@ -2,80 +2,49 @@
 #define GUESSING_CUDA_H
 
 #include "PCFG.h"
-#include <cuda_runtime.h>
-#include <vector>
-#include <string>
+struct GpuOrderedValuesData{
+    char* letter_all_values;// 把各个segment 的ordered_values展平
+    char* digit_all_values;
+    char* symbol_all_values;
 
-// 使用前向声明以避免循环依赖
-class CUDABatchManager;
+    int* letter_value_offsets; // 每个ordered_value在letter_all_values中的起始
+    int* digits_value_offsets; // 每个ordered_value在digit_all_values中的起始位置
+    int* symbol_value_offsets; // 每个ordered_value在symbol_all_values中的起始
 
-// 描述一个独立的生成任务
-struct GuessTask {
-    // 任务来源的PT信息
-    const PT* source_pt;
-    
-    // 任务的前缀（对于多段PT）
-    std::string prefix;
-    
-    // 任务需要使用的值列表（指向segment中的ordered_values）
-    const std::vector<std::string>* values;
-    
-    // 这个任务将生成多少个猜测
-    int num_guesses_to_generate;
+    int* letter_seg_offsets; // 每个letter segment第一个ordered_value在value_offsets中的是哪个
+    int* digit_seg_offsets; // 每个digit segment第一个ordered_value在value_offsets中的是哪个
+    int* symbol_seg_offsets; // 每个symbol segment第一个ordered_value在value_offsets
 };
+extern GpuOrderedValuesData* gpu_data;
 
-// 统一的CUDA核函数，用于批处理
-__global__ void generateGuessesKernel_Batch(
-    const GuessTask* d_tasks,
-    int num_tasks,
-    char* d_result_buffer,
-    int* d_result_lengths,
-    // ... 其他必要的扁平化数据指针
+
+// 声明CUDA函数，这样.cpp文件就能调用它们
+void init_gpu_ordered_values_data(
+    GpuOrderedValuesData* d_gpu_data,
+    PriorityQueue& q
 );
 
-// 新的管理器类，用于处理CUDA批处理
-class CUDABatchManager {
-public:
-    CUDABatchManager(PriorityQueue& pq);
-    ~CUDABatchManager();
+// 如果有其他CUDA函数也在此声明
 
-    // 添加一个PT作为任务到当前批次
-    void AddTaskFromPT(const PT& pt);
-
-    // 当批次达到阈值时，处理当前批次
-    void FlushIfReady();
-
-    // 强制处理所有剩余的任务
-    void FlushAll();
-
-private:
-    PriorityQueue& p_queue; // 对主优先队列的引用
-    std::vector<GuessTask> host_tasks; // 主机端的任务队列
-    long long total_guesses_in_batch;  // 当前批次中累计的猜测总数
-    long long batch_threshold;         // 触发处理的阈值
-
-    // 准备并运行批处理
-    void PrepareAndRunBatch();
-
-    // 释放为批处理分配的GPU内存
-    void FreeBatchGPUMemory(/* ... */);
-};
-
-// 扩展的PriorityQueue类，现在包含批处理管理器
-class PriorityQueue_CUDA : public PriorityQueue {
-public:
-    PriorityQueue_CUDA();
-    ~PriorityQueue_CUDA();
+struct Taskcontent{
+    int segment_type; // 1: letter, 2: digit, 3: symbol
+    int seg_id;
+    char* prefix;
+    int prefix_length; // prefix的长度
     
-    // PopNext_CUDA现在将任务添加到批处理管理器
-    void PopNext_CUDA();
-
-    // Flush_CUDA用于在循环结束时处理所有剩余的任务
-    void Flush_CUDA();
-
-private:
-    CUDABatchManager* batch_manager;
 };
 
-#endif // GUESSING_CUDA_H
+class TaskManager{
 
+};
+
+__global__ generate_guesses_kernel(
+    GpuOrderedValuesData* gpu_data,
+    Taskcontent* tasks
+)
+
+
+
+
+
+#endif
