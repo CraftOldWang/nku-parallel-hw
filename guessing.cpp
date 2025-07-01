@@ -222,6 +222,8 @@ void PriorityQueue::Generate(PT pt)
             guesses.emplace_back(guess);
             total_guesses += 1;
         }
+
+        //TODO 转变成添加任务的逻辑，并且任务数达到10_0000则launch, prefix是 ""
     }
     else
     {
@@ -277,5 +279,8 @@ void PriorityQueue::Generate(PT pt)
             guesses.emplace_back(temp);
             total_guesses += 1;
         }
+
+        //TODO 转变成添加任务的逻辑，并且任务数达到10_0000则launch
+
     }
 }
