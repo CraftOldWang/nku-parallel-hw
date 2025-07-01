@@ -22,15 +22,6 @@ struct GpuOrderedValuesData{
 
 
 
-// 声明CUDA函数，这样.cpp文件就能调用它们
-void init_gpu_ordered_values_data(
-    GpuOrderedValuesData* d_gpu_data,
-    PriorityQueue& q
-);
-
-void clean_gpu_ordered_values_data(
-    GpuOrderedValuesData* d_gpu_data
-);
 
 // 如果有其他CUDA函数也在此声明
 
@@ -53,9 +44,9 @@ public:
     vector<int> seg_lens;
     vector<string> prefixs;
     vector<int> prefix_lens; // 每个prefix的长度
-    int taskcount;
 
     vector<int> seg_value_count; // 每个seg 有多少 value （其实只会有所谓最后一个seg的， 就是后面一个seg生成相应数量guess）
+    int taskcount;
     int guesscount; // 到10_0000了就会丢给核函数去执行
 
 
@@ -69,6 +60,8 @@ public:
     
 };
 
+
+// 用二分查找找 taskid 的函数（不一定会用上）
 __device__ int find_task_id(int guess_id, int* cumulative_offsets, int task_count) {
     int left = 0, right = task_count - 1;
     while (left <= right) {
@@ -84,14 +77,24 @@ __device__ int find_task_id(int guess_id, int* cumulative_offsets, int task_coun
     return task_count - 1; // 安全返回
 }
 
+// 生成猜测的 kernal 函数 。生成的猜测放到 d_guess_buffer 上
 __global__ void generate_guesses_kernel(
     GpuOrderedValuesData* gpu_data,
     Taskcontent* d_tasks,
     char* d_guess_buffer
 );
 
-
+// 全局变量声明
 extern GpuOrderedValuesData* gpu_data;
 extern TaskManager* task_manager;
+
+// 初始化函数、清理函数声明
+
+// 初始化gpu上用于查找的数据 (segment表)
+void init_gpu_ordered_values_data(GpuOrderedValuesData*& d_gpu_data, PriorityQueue& q);
+// 清理gpu上用来查找的数据 (segment表)
+void clean_gpu_ordered_values_data(GpuOrderedValuesData*& d_gpu_data);
+// 清理 segment表 和 taskmanager (清理两个全局变量) 
+void cleanup_global_cuda_resources();
 
 #endif
