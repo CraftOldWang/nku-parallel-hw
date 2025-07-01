@@ -159,11 +159,7 @@ public:
 
     // 将优先队列最前面的一个PT
     void PopNext();
-    
-    // CUDA版本的方法
-    void Generate_CUDA(PT pt);
-    void PopNext_CUDA();
-    
+        
     int total_guesses = 0;
     vector<string> guesses;
 };

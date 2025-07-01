@@ -191,7 +191,7 @@ void PriorityQueue::Generate(PT pt)
 {
     // 计算PT的概率，这里主要是给PT的概率进行初始化
     CalProb(pt);
-
+    
     // 对于只有一个segment的PT，直接遍历生成其中的所有value即可
     if (pt.content.size() == 1)
     {
@@ -215,15 +215,22 @@ void PriorityQueue::Generate(PT pt)
         // 这个for循环就是你需要进行并行化的主要部分了，特别是在多线程&GPU编程任务中
         // 可以看到，这个循环本质上就是把模型中一个segment的所有value，赋值到PT中，形成一系列新的猜测
         // 这个过程是可以高度并行化的
-        for (int i = 0; i < pt.max_indices[0]; i += 1)
-        {
-            string guess = a->ordered_values[i];
-            // cout << guess << endl;
-            guesses.emplace_back(guess);
-            total_guesses += 1;
-        }
+        // for (int i = 0; i < pt.max_indices[0]; i += 1)
+        // {
+        //     string guess = a->ordered_values[i];
+        //     // cout << guess << endl;
+        //     guesses.emplace_back(guess);
+        //     total_guesses += 1;
+        // }
 
         //TODO 转变成添加任务的逻辑，并且任务数达到10_0000则launch, prefix是 ""
+        //BUG ?? 姑且认为 pt.max_indices[0] 其实就是a,只不过一个是pt里的副本，一个是model那里的。
+        // 因为存了好几遍所以显得乱。
+        
+        task_manager->add_task(a, "", *this);
+        if(task_manager->guesscount > GPU_BATCH_SIZE){
+            task_manager->launch_gpu_kernel(guesses, *this);
+        }
     }
     else
     {
@@ -272,15 +279,22 @@ void PriorityQueue::Generate(PT pt)
         // 这个for循环就是你需要进行并行化的主要部分了，特别是在多线程&GPU编程任务中
         // 可以看到，这个循环本质上就是把模型中一个segment的所有value，赋值到PT中，形成一系列新的猜测
         // 这个过程是可以高度并行化的
-        for (int i = 0; i < pt.max_indices[pt.content.size() - 1]; i += 1)
-        {
-            string temp = guess + a->ordered_values[i];
-            // cout << temp << endl;
-            guesses.emplace_back(temp);
-            total_guesses += 1;
+        // for (int i = 0; i < pt.max_indices[pt.content.size() - 1]; i += 1)
+        // {
+        //     string temp = guess + a->ordered_values[i];
+        //     // cout << temp << endl;
+        //     guesses.emplace_back(temp);
+        //     total_guesses += 1;
+        // }
+
+        //TODO 转变成添加任务的逻辑，并且任务数达到10_0000则launch, 有prefix
+        //BUG ?? 姑且认为 pt.max_indices[pt.content.size()-1] 其实就是a,只不过一个是pt里的副本，一个是model那里的。
+        // 因为存了好几遍所以显得乱。
+        task_manager->add_task(a, guess, *this);
+        if(task_manager->guesscount > GPU_BATCH_SIZE){
+            task_manager->launch_gpu_kernel(guesses, *this);
         }
 
-        //TODO 转变成添加任务的逻辑，并且任务数达到10_0000则launch
 
     }
 }

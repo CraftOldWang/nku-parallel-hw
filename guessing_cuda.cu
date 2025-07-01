@@ -9,42 +9,124 @@ using namespace std;
 #define DEBUG
 
 // CUDA错误检查宏
+// gemini 改进过的
 #define CUDA_CHECK(call) \
     do { \
-        cudaError_t err = call; \
-        if (err != cudaSuccess) { \
-            printf("CUDA error at %s:%d - %s\n", __FILE__, __LINE__, cudaGetErrorString(err)); \
-            exit(1); \
+        cudaError_t err__ = (call); \
+        if (err__ != cudaSuccess) { \
+            fprintf(stderr, "\033[1;31m[CUDA ERROR]\033[0m %s:%d: %s (%d)\n", \
+                __FILE__, __LINE__, cudaGetErrorString(err__), err__); \
+            exit(EXIT_FAILURE); \
         } \
-    } while(0)
+    } while (0)
 
-// vector<segment> letters;
-// vector<segment> digits;
-// vector<segment> symbols;
-// 把所有segment的ordered_values放在一个全局变量中
-// vector<string> ordered_values;
-// 偏移，某个指针
-// 某一个int 数字， 对应
-// 只需要 给一个seg->给出对应的下标 , 这个下标（int的） 直接在gpu 那里也能用
+
 GpuOrderedValuesData* gpu_data = nullptr;
 TaskManager* task_manager = nullptr;
 
-
-__global__ void generate_guesses_kernel(GpuOrderedValuesData* gpu_data,Taskcontent* d_tasks,char* d_guess_buffer) {
-    // 这里实现具体的kernel逻辑
-    // 需要根据gpu_data中的数据生成相应的guesses
-    // 注意：这里只是一个示例，具体实现需要根据实际需求来编写
-
-    // 每个线程做自己的事情
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-    // 比如访问任务数据
-    int seg_type = d_tasks->seg_types[idx];
-    // 写入生成的猜测结果
-    d_guess_buffer[idx * 32 + 0] = 'a';  // 举个例子
+// guess的数量 >10_0000 个 。 kernal函数
+//TODO 核函数中间逻辑有点。。。。也许还能优化。
+//TODO 傻了， 我这个一次性最多 10_0000 ~ 100_0000 个猜测， 每个block最多1024 个线程， 但是
+// 数据如下， blockDimx 可以特别大.... 麻了
+//每个block最大线程数: 1024
+//每个SM最大线程数: 1024
+// block维度限制: (1024, 1024, 64)
+// grid维度限制: (2147483647, 65535, 65535)
+// 共有SM数量: 40
+__global__ void generate_guesses_kernel(
+    GpuOrderedValuesData* gpu_data,
+    Taskcontent* d_tasks,
+    char* d_guess_buffer
+) {
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    int total_threads = gridDim.x * blockDim.x;
+    
+    // 计算每个线程处理的guess块大小
+    int guesses_per_thread = (d_tasks->guesscount + total_threads - 1) / total_threads;
+    
+    // 当前线程处理的guess范围
+    int start_guess = tid * guesses_per_thread;
+    int end_guess = min(start_guess + guesses_per_thread, d_tasks->guesscount);
+    
+    // 缓存当前task的信息 
+    int current_task_id = -1;
+    int current_task_start = 0;
+    int current_task_end = 0;
+    
+    // 缓存当前task的segment信息
+    int seg_type, seg_id, seg_len, prefix_len, prefix_offset;
+    int task_output_offset;
+    char* all_values;
+    int* value_offsets;
+    int* seg_offsets;
+    int seg_start_idx;
+    
+    for (int guess_id = start_guess; guess_id < end_guess; guess_id++) {
+        
+        // 检查是否需要更新task信息
+        if (guess_id < current_task_start || guess_id >= current_task_end) {
+            // 需要查找新的task
+            int guess_offset = 0;
+            for (int i = 0; i < d_tasks->taskcount; i++) {
+                int task_guess_count = d_tasks->seg_value_counts[i];
+                if (guess_id < guess_offset + task_guess_count) {
+                    // 更新缓存
+                    current_task_id = i;
+                    current_task_start = guess_offset;
+                    current_task_end = guess_offset + task_guess_count;
+                    
+                    // 缓存task信息
+                    seg_type = d_tasks->seg_types[i];
+                    seg_id = d_tasks->seg_ids[i];
+                    seg_len = d_tasks->seg_lens[i];
+                    prefix_len = d_tasks->prefix_lens[i];
+                    prefix_offset = d_tasks->prefix_offsets[i];
+                    task_output_offset = d_tasks->output_offsets[i];
+                    
+                    // 选择数据源
+                    if (seg_type == 1) {
+                        all_values = gpu_data->letter_all_values;
+                        value_offsets = gpu_data->letter_value_offsets;
+                        seg_offsets = gpu_data->letter_seg_offsets;
+                    } else if (seg_type == 2) {
+                        all_values = gpu_data->digit_all_values;
+                        value_offsets = gpu_data->digits_value_offsets;
+                        seg_offsets = gpu_data->digit_seg_offsets;
+                    } else {
+                        all_values = gpu_data->symbol_all_values;
+                        value_offsets = gpu_data->symbol_value_offsets;
+                        seg_offsets = gpu_data->symbol_seg_offsets;
+                    }
+                    
+                    seg_start_idx = seg_offsets[seg_id];
+                    break;
+                }
+                guess_offset += task_guess_count;
+            }
+        }
+        
+        // 当前guess在task中的局部索引
+        int local_guess_idx = guess_id - current_task_start;
+        
+        // 找到对应的value
+        int value_idx = seg_start_idx + local_guess_idx;
+        
+        // 计算输出位置
+        int output_offset = task_output_offset + local_guess_idx * (seg_len + prefix_len);
+        
+        // 复制前缀
+        for (int i = 0; i < prefix_len; i++) {
+            d_guess_buffer[output_offset + i] = d_tasks->prefixs[prefix_offset + i];
+        }
+        
+        // 复制value
+        int value_start = value_offsets[value_idx];
+        
+        for (int i = 0; i < seg_len; i++) {
+            d_guess_buffer[output_offset + prefix_len + i] = all_values[value_start + i];
+        }
+    }
 }
-
-
 
 void TaskManager::add_task(segment* seg, string prefix, PriorityQueue& q){
 
@@ -76,15 +158,12 @@ void TaskManager::add_task(segment* seg, string prefix, PriorityQueue& q){
     seg->PrintSeg();
     print();
 #endif
-    // if ( guesscount >= 100000){
-    //     launch_gpu_kernel();
-    // } 
-    //这个逻辑写外面吧
+
 }
 
 
 
-void TaskManager::launch_gpu_kernel(vector<string>& guesses){
+void TaskManager::launch_gpu_kernel(vector<string>& guesses, PriorityQueue& q){
     //1. 准备数据
     Taskcontent h_tasks; 
     Taskcontent temp; // 为了中转一下 gpu的地址...(h_tasks里是cpu的)
@@ -150,12 +229,14 @@ void TaskManager::launch_gpu_kernel(vector<string>& guesses){
     h_tasks.guesscount = guesscount;
     h_tasks.seg_lens  = seg_lens.data();
     h_tasks.seg_value_counts = seg_value_count.data(); // 每个segment的value数量
-
     //得到 gpu_buffer 数组的长度
-    for(int i = 0; i < seg_value_count.size(); i++){
+    for(int i = 0; i < taskcount; i++){
         res_offset.push_back(result_len);
-        result_len += seg_value_count[i]*(seg_lens[i] + prefix_lens[i]) ;
+        result_len += seg_value_count[i]*(seg_lens[i] + prefix_lens[i]);
     }
+    h_tasks.output_offsets = res_offset.data(); // 这样的话，就没有存最末尾的。只有taskcount个
+
+
 
 #ifdef DEBUG
     cout << "\n结果缓冲区计算:" << endl;
@@ -235,6 +316,7 @@ void TaskManager::launch_gpu_kernel(vector<string>& guesses){
     CUDA_CHECK(cudaMalloc(&temp.prefix_offsets, (prefixs.size() + 1 ) * sizeof(int))); // +1 for the end offset
     CUDA_CHECK(cudaMalloc(&temp.prefix_lens, prefix_lens.size() * sizeof(int)));
     CUDA_CHECK(cudaMalloc(&temp.seg_value_counts, seg_value_count.size() * sizeof(int)));
+    CUDA_CHECK(cudaMalloc(&temp.output_offsets, (taskcount + 1) * sizeof(int)));
     CUDA_CHECK(cudaMalloc(&d_tasks, sizeof(Taskcontent)));
 
 
@@ -253,6 +335,7 @@ void TaskManager::launch_gpu_kernel(vector<string>& guesses){
     CUDA_CHECK(cudaMemcpy(temp.prefix_offsets, h_tasks.prefix_offsets, (prefixs.size() + 1 ) * sizeof(int), cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(temp.prefix_lens, h_tasks.prefix_lens, prefixs.size() * sizeof(int), cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(temp.seg_value_counts, h_tasks.seg_value_counts, seg_value_count.size() *sizeof(int), cudaMemcpyHostToDevice)); 
+    CUDA_CHECK(cudaMemcpy(temp.output_offsets, h_tasks.output_offsets,  (taskcount + 1) * sizeof(int), cudaMemcpyHostToDevice)); 
 
 
     //int 直接赋值到 temp里 再copy到gpu ，应该可以
@@ -267,7 +350,8 @@ void TaskManager::launch_gpu_kernel(vector<string>& guesses){
     
 
     //4. 启动kernal 开始计算
-    int threads_per_block = 256;
+    //TODO 看一下到底能启用多少thread？ 这里不很清楚该怎么处理
+    int threads_per_block = 1024;
     int blocks = (guesscount + threads_per_block - 1) / threads_per_block;
     
 #ifdef DEBUG
@@ -310,6 +394,7 @@ void TaskManager::launch_gpu_kernel(vector<string>& guesses){
     CUDA_CHECK(cudaFree(temp.prefix_offsets));
     CUDA_CHECK(cudaFree(temp.prefix_lens));
     CUDA_CHECK(cudaFree(temp.seg_value_counts));
+    CUDA_CHECK(cudaFree(temp.output_offsets));
     CUDA_CHECK(cudaFree(d_tasks));
     CUDA_CHECK(cudaFree(d_guess_buffer));
     
@@ -322,6 +407,7 @@ void TaskManager::launch_gpu_kernel(vector<string>& guesses){
     temp.prefix_lens = nullptr;
     temp.seg_value_counts = nullptr;
     temp.prefixs = nullptr;
+    temp.output_offsets = nullptr;
     d_tasks = nullptr;
     d_guess_buffer = nullptr;
     
@@ -390,8 +476,6 @@ void TaskManager::print() {
     cout << endl;
 
 }
-
-
 
 
 
@@ -646,6 +730,8 @@ void cleanup_global_cuda_resources() {
     }
     
     if (task_manager != nullptr) {
+        // 直接删就好了，STL自己会释放。
+        // task_manager->clean();
         delete task_manager;
         task_manager = nullptr;
     }

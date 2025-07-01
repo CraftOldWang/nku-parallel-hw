@@ -12,5 +12,6 @@
 // #define USING_SMALL
 // #define THREAD_NUM 8 // 线程池的线程数
 
-
+// 每 10_0000 个guess 拿去给gpu处理一下
+#define GPU_BATCH_SIZE 100000
 #endif
