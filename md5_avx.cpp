@@ -160,7 +160,6 @@ void MD5Hash_AVX(string *input, __m256i *state)
                 tmp_state3[k] = state3_values[k];
             }
         }
-        cout <<" test test " <<endl;
     }
     
     // 将最终结果从临时保存区加载回状态向量

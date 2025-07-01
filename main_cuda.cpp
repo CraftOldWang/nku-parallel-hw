@@ -57,7 +57,7 @@ string GetTrainingDataPath() {
 #ifdef _WIN32
     return ".\\guessdata\\Rockyou-singleLined-full.txt";
 #else
-    return "/guessdata/Rockyou-singleLined-full.txt";
+    return "./guessdata/Rockyou-singleLined-full.txt";
 #endif
 }
 
@@ -114,7 +114,9 @@ double TrainModel(PriorityQueue& q) {
     q.m.train(GetTrainingDataPath());
     q.m.order();
     init_gpu_ordered_values_data(gpu_data, q); // 传输数据到GPU
-    
+    task_manager->init_length_maps(q);
+
+    cout << "end transfer" <<endl;
     auto end_train = system_clock::now();
     auto duration_train = duration_cast<microseconds>(end_train - start_train);
     double time_train = static_cast<double>(duration_train.count()) * microseconds::period::num / microseconds::period::den;
@@ -193,7 +195,6 @@ void PrintExperimentResult(const ExperimentConfig& config, const ExperimentResul
 // --- 4. 全新、整洁的 main 函数 ---
 int main() {
     SetupEnvironment();
-    
     task_manager = new TaskManager();    
 
     PrintExperimentBatchHeader();

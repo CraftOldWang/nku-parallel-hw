@@ -1,19 +1,12 @@
 #include "PCFG.h"
 #include <chrono>
 #include "md5.h"
+#include "md5_avx.h"  // AVX实现的MD5
 #include <iomanip>
-#include "config.h"
-#include "guessing_cuda.h"
+#include <immintrin.h> // AVX 指令集头文件
 
-// 如果定义了使用SIMD，则包含SIMD头文件
-#ifdef USING_SIMD
-#include "md5_simd.h"
-#endif
 using namespace std;
 using namespace chrono;
-
-
-
 
 // 实验配置数组，每一组包含两个参数：总生成数量和批处理大小
 struct ExperimentConfig {
@@ -38,49 +31,26 @@ const ExperimentConfig EXPERIMENTS[] = {
 // 要运行的实验数量
 const int NUM_EXPERIMENTS = sizeof(EXPERIMENTS) / sizeof(EXPERIMENTS[0]);
 
-// 编译指令如下
-// g++ main.cpp train.cpp guessing.cpp md5.cpp -o main
-// g++ main.cpp train.cpp guessing.cpp md5.cpp -o main -O1
-// g++ main.cpp train.cpp guessing.cpp md5.cpp -o main -O2
+// 编译指令
+// g++ main_avx.cpp train.cpp guessing.cpp md5.cpp md5_avx.cpp -o main_avx -mavx2 -O3
 
 int main()
 {
-#ifdef _WIN32
-    system("chcp 65001 > nul");
-#endif
-    task_manager = new TaskManager();
-
     // 添加时间戳
     auto now = system_clock::now();
     auto now_time = system_clock::to_time_t(now);
-
-#ifdef _WIN32
-    #ifdef USING_SIMD
-    cout << "\n--- WIN SIMD CUDA MD5 实验批次 [" << std::ctime(&now_time) << "] ---\n";
-    #else
-    cout << "\n--- WIN 标准CUDA MD5 实验批次 [" << std::ctime(&now_time) << "] ---\n";
-    #endif
-#else
-    #ifdef USING_SIMD
-    cout << "\n--- SIMD MD5 CUDA 实验批次 [" << std::ctime(&now_time) << "] ---\n";
-    #else
-    cout << "\n--- 标准 MD5 CUDA 实验批次 [" << std::ctime(&now_time) << "] ---\n";
-    #endif
-#endif
+    cout << "\n--- AVX MD5 实验批次 [" << std::ctime(&now_time) << "] ---\n";
     
     // 训练模型（只需一次）
     PriorityQueue q;
     auto start_train = system_clock::now();
-// 将windows下用的main.cpp合并进来了
 #ifdef _WIN32
     q.m.train(".\\guessdata\\Rockyou-singleLined-full.txt");
 #else
-    q.m.train("/guessdata/Rockyou-singleLined-full.txt");
+    q.m.train("./guessdata/Rockyou-singleLined-full.txt");
 #endif
+
     q.m.order();
-    // 传输数据到gpu， 但是算在训练时间里？ 每次又不需要重置...
-    
-    init_gpu_ordered_values_data(gpu_data,q);
     auto end_train = system_clock::now();
     auto duration_train = duration_cast<microseconds>(end_train - start_train);
     double time_train = double(duration_train.count()) * microseconds::period::num / microseconds::period::den;
@@ -101,8 +71,6 @@ int main()
         
         // 重置队列
         q.init();
-        q.guesses.clear();
-
         
         double time_hash = 0;  // 用于MD5哈希的时间
         double time_guess = 0; // 哈希和猜测的总时长
@@ -114,7 +82,6 @@ int main()
         while (!q.priority.empty())
         {
             q.PopNext();
-            //BUG 呃这里都直接赋值了， 那么guessing 里的 total_guesses+= 1 不是一点用没有？
             q.total_guesses = q.guesses.size();
             if (q.total_guesses - curr_num >= 100000)
             {
@@ -144,53 +111,22 @@ int main()
             // 达到批处理大小，进行哈希计算
             if (curr_num > NUM_PER_HASH)
             {
+                // cout << "Start performing the hash calculation..." << endl;
                 auto start_hash = system_clock::now();
                 
-                #ifdef USING_SIMD
-                // 使用SIMD进行MD5计算
-                #ifdef USING_ALIGNED
-                alignas(16) uint32x4_t state[4]; // 每个lane 一个 口令的 一部分 state
-                #endif
-                #ifndef USING_ALIGNED
-                uint32x4_t state[4]; // 每个lane 一个 口令的 一部分 state
-                #endif
-
-                #ifdef NOT_USING_STRING_ARR
-                size_t i = 0;
-                for(; i < q.guesses.size(); i += 4){
-                    //HACK string 的copy 也很费时间
-                    string &pw1 = q.guesses[i];
-                    string &pw2 = q.guesses[i+1];
-                    string &pw3 = q.guesses[i+2];
-                    string &pw4 = q.guesses[i+3];
-    
-                    MD5Hash_SIMD(pw1, pw2, pw3, pw4, state);
-                }
-                bit32 state2[4];
-                for (; i < q.guesses.size(); ++i) {
-                    MD5Hash(q.guesses[i], state2); // 假设你有个单个处理版本
-                }
-                #endif
-
-                #ifndef NOT_USING_STRING_ARR
-                for(size_t i = 0; i < q.guesses.size(); i += 4){
-                    string pw[4] = {"", "", "", ""};
-                    for (int j = 0; j < 4 && (i + j) < q.guesses.size(); ++j) {
-                        pw[j] = q.guesses[i + j];
+                // 使用AVX进行批处理
+                for(size_t i = 0; i < q.guesses.size(); i += 8) {
+                    string passwords[8] = {"", "", "", "", "", "", "", ""};
+                    
+                    // 填充密码数组（考虑边界情况）
+                    for (int j = 0; j < 8 && (i + j) < q.guesses.size(); ++j) {
+                        passwords[j] = q.guesses[i + j];
                     }
-                    MD5Hash_SIMD(pw, state);
-                }    
-                #endif
-                
-                #else
-                // 使用标准MD5计算
-                bit32 state[4];
-                
-                for (string pw : q.guesses)
-                {
-                    MD5Hash(pw, state);
+                    
+                    // 使用AVX版本计算MD5
+                    __m256i state[4]; // 8个密码的状态向量
+                    MD5Hash_AVX(passwords, state);
                 }
-                #endif
                 
                 // 计算哈希时间
                 auto end_hash = system_clock::now();
@@ -203,12 +139,7 @@ int main()
                 q.guesses.clear();
             }
         }
-
-        // 如果还有任务，就清除...(不过我没用异步，所以不至于)
-        task_manager->clean();
     }
-
-    clean_gpu_ordered_values_data(gpu_data);
     
     cout << "\n--- 实验批次结束 ---\n" << endl;
     return 0;

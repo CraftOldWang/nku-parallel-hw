@@ -80,3 +80,13 @@ g++ -O2 main_pool.cpp train.cpp correctness_guess_pool.cpp md5.cpp -o main
 本地是使用cmake构建的，见CmakeLists.txt
 只试过8进程。
 
+
+## 实验5 CUDA
+
+结束了。
+
+_ori 是 original ， 就是最初版本 的 main 或者guessing 文件。
+run_cuda 可以在支持avx 和 cuda 的地方一次性把我要做的所有跑完。
+DEBUG 、 TIME_COUNT 可以启用一些调试信息（后者用来看哪里花的时间多）。
+最初比normal 慢 是因为，Findletter 那几个函数居然tm是线性查找。。。
+都是使用-O2，用 -O0 或者-O1 没啥意义说是。
