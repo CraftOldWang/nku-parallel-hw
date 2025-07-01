@@ -45,7 +45,9 @@ const int NUM_EXPERIMENTS = sizeof(EXPERIMENTS) / sizeof(EXPERIMENTS[0]);
 
 int main()
 {
+#ifdef _WIN32
     system("chcp 65001 > nul");
+#endif
     task_manager = new TaskManager();
 
     // 添加时间戳

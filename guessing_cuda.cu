@@ -29,15 +29,12 @@ using namespace std;
 GpuOrderedValuesData* gpu_data = nullptr;
 TaskManager* task_manager = nullptr;
 
-__global__ void generate_guesses_kernel(
-    GpuOrderedValuesData* gpu_data,
-    Taskcontent* d_tasks,
-    char* d_guess_buffer
-) {
+
+__global__ void generate_guesses_kernel(GpuOrderedValuesData* gpu_data,Taskcontent* d_tasks,char* d_guess_buffer) {
     // 这里实现具体的kernel逻辑
     // 需要根据gpu_data中的数据生成相应的guesses
     // 注意：这里只是一个示例，具体实现需要根据实际需求来编写
-{
+
     // 每个线程做自己的事情
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -45,249 +42,8 @@ __global__ void generate_guesses_kernel(
     int seg_type = d_tasks->seg_types[idx];
     // 写入生成的猜测结果
     d_guess_buffer[idx * 32 + 0] = 'a';  // 举个例子
-
 }
 
-}
-
-
-void init_gpu_ordered_values_data(
-    GpuOrderedValuesData* d_gpu_data,
-    PriorityQueue& q
-) {
-    //cpu上的数据
-    GpuOrderedValuesData h_gpu_data;
-
-    // 计算char*数组总长度
-    size_t total_letter_length = 0;
-    size_t total_digit_length = 0;
-    size_t total_symbol_length = 0;
-
-    // 有多少个各类型的 value 
-    size_t letter_offsetarr_length = 0;
-    size_t digit_offsetarr_length = 0;
-    size_t symbol_offsetarr_length = 0;
-
-    char* letter_all_values = nullptr;// 把各个segment 的ordered_values展平
-    char* digit_all_values= nullptr;
-    char* symbol_all_values= nullptr;
-
-    int* letter_value_offsets= nullptr; // 每个ordered_value在letter_all_values中的起始
-    int* digits_value_offsets= nullptr; // 每个ordered_value在digit_all_values中的起始位置
-    int* symbol_value_offsets= nullptr; // 每个ordered_value在symbol_all_values中的起始
-
-    int* letter_seg_offsets= nullptr; // 每个letter segment第一个ordered_value在value_offsets中的是哪
-    int* digit_seg_offsets= nullptr; // 每个digit segment第一个ordered_value在value_offsets中的是哪个
-    int* symbol_seg_offsets= nullptr; // 每个symbol segment第一个ordered_value在value_offsets
-
-    for (const auto& seg : q.m.letters) {
-        total_letter_length += seg.ordered_values.size() * seg.length;
-        letter_offsetarr_length += seg.ordered_values.size();
-    }
-    for (const auto& seg : q.m.digits) {
-        total_digit_length += seg.ordered_values.size()* seg.length;
-        digit_offsetarr_length += seg.ordered_values.size();
-    }
-    for (const auto& seg : q.m.symbols) {
-        total_symbol_length += seg.ordered_values.size()* seg.length;
-        symbol_offsetarr_length += seg.ordered_values.size();
-    }
-
-    letter_all_values = new char[total_letter_length];
-    letter_value_offsets = new int[letter_offsetarr_length+1];
-    letter_seg_offsets = new int[q.m.letters.size()+1];
-
-    digit_all_values = new char[total_digit_length];
-    digits_value_offsets = new int[digit_offsetarr_length+1];
-    digit_seg_offsets = new int[q.m.digits.size()+1];
-
-    symbol_all_values = new char[total_symbol_length];
-    symbol_value_offsets = new int[symbol_offsetarr_length+1];
-    symbol_seg_offsets = new int[q.m.symbols.size()+1]; 
-    // 多补了一个offset 来表示末尾，实际不对应segment 以及 value
-
-    int value_offset = 0;
-    int seg_offset  = 0;
-
-    for(int i = 0 ;i < q.m.letters.size() ;i++) {
-        letter_seg_offsets[i] = seg_offset;
-        const auto& seg = q.m.letters[i];
-        for (int j =0 ;j < seg.ordered_values.size();j++ ){
-            letter_value_offsets[seg_offset++] = value_offset;
-            string value = seg.ordered_values[j];
-            for(int k =0; k < value.length(); k++) {
-                letter_all_values[value_offset++] = value[k];
-            }
-        }
-    }
-    letter_seg_offsets[q.m.letters.size()] = seg_offset; // 最后补一下...其实对应长度为0
-    letter_value_offsets[letter_offsetarr_length] = value_offset;
-    seg_offset = 0;
-    value_offset = 0;
-
-    for (int i=0;i< q.m.digits.size();i++) {
-        digit_seg_offsets[i] = seg_offset;
-        const auto& seg = q.m.digits[i];
-        seg_offset += seg.ordered_values.size();
-        for (int j=0; j< seg.ordered_values.size();j++ ) {
-            digits_value_offsets[seg_offset++] = value_offset;
-            string value = seg.ordered_values[j];
-            for(int k = 0;k < value.length(); k++) {
-                digit_all_values[value_offset++] = value[k];
-            }
-        }
-    }
-    digit_seg_offsets[q.m.digits.size()] = seg_offset; // 最后补一下...其实对应长度为0
-    digits_value_offsets[digit_offsetarr_length] = value_offset;
-    seg_offset = 0;
-    value_offset = 0;   
-
-
-    for (int i=0;i< q.m.symbols.size();i++) {
-        symbol_seg_offsets[i] = seg_offset;
-        const auto& seg = q.m.symbols[i];
-        seg_offset += seg.ordered_values.size();
-        for (int j=0; j< seg.ordered_values.size();j++ ) {
-            symbol_value_offsets[seg_offset++] = value_offset;
-            string value = seg.ordered_values[j];
-            for(int k = 0;k < value.length(); k++) {
-                symbol_all_values[value_offset++] = value[k];
-            }
-        }
-    }
-    symbol_seg_offsets[q.m.symbols.size()] = seg_offset; // 最后补一下
-    symbol_value_offsets[symbol_offsetarr_length] = value_offset;
-
-
-
-    // 相关东西都要的是地址。。。。。。。 指针只是指针， 解释成cpu or gpu 的内存 ，是看具体情景
-    // 比如cudaMemcpy 用cudaMemcpyKind kind 来区分。
-
-    //把各个指针相应数据复制到gpu上
-#ifdef DEBUG
-    printf("total_letter_length: %zu\n", total_letter_length);
-    printf("total_digit_length: %zu\n", total_digit_length);
-    printf("total_symbol_length: %zu\n", total_symbol_length);
-    printf("letter_offsetarr_length: %zu\n", letter_offsetarr_length);
-    printf("digit_offsetarr_length: %zu\n", digit_offsetarr_length);
-    printf("symbol_offsetarr_length: %zu\n", symbol_offsetarr_length);
-
-    //TODO 也许可以打印一下 q.m. 里面的那些长度看看有没有问题。
-
-    // 看看letter 的前十个是否有问题。
-    for(int i=0;i<10;i++){
-        segment& seg = q.m.letters[i];  
-        seg.PrintSeg();
-        seg.PrintValues();
-        for(int j = 0; j < seg.ordered_values.size(); j++) {
-            string letter_value(h_gpu_data.letter_all_values + 
-                h_gpu_data.letter_value_offsets[h_gpu_data.letter_seg_offsets[i]] + 
-                j * seg.length, seg.length );
-            cout << letter_value << " ";
-        }
-        cout << endl <<endl;
-    }
-
-    // 另外俩也可以以类似方式看是否有问题。
-#endif
-    // 分配内存 以及复制
-    CUDA_CHECK(cudaMalloc(&h_gpu_data.letter_all_values, total_letter_length * sizeof(char)));
-    CUDA_CHECK(cudaMalloc(&h_gpu_data.digit_all_values, total_digit_length * sizeof(char)));
-    CUDA_CHECK(cudaMalloc(&h_gpu_data.symbol_all_values, total_symbol_length * sizeof(char)));
-    CUDA_CHECK(cudaMemcpy(h_gpu_data.letter_all_values, letter_all_values, total_letter_length * sizeof(char), cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(h_gpu_data.digit_all_values, digit_all_values, total_digit_length * sizeof(char), cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(h_gpu_data.symbol_all_values, symbol_all_values, total_symbol_length * sizeof(char), cudaMemcpyHostToDevice));
-
-    // 分配偏移数组 以及复制
-    CUDA_CHECK(cudaMalloc(&h_gpu_data.letter_value_offsets, (letter_offsetarr_length+1)* sizeof(int)));
-    CUDA_CHECK(cudaMalloc(&h_gpu_data.digits_value_offsets, (digit_offsetarr_length+1) * sizeof(int)));
-    CUDA_CHECK(cudaMalloc(&h_gpu_data.symbol_value_offsets, (symbol_offsetarr_length+1) * sizeof(int)));
-    CUDA_CHECK(cudaMemcpy(h_gpu_data.letter_value_offsets, letter_value_offsets, (letter_offsetarr_length+1)* sizeof(int), cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(h_gpu_data.digits_value_offsets, digits_value_offsets, (digit_offsetarr_length+1) * sizeof(int), cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(h_gpu_data.symbol_value_offsets, symbol_value_offsets, (symbol_offsetarr_length+1) * sizeof(int), cudaMemcpyHostToDevice));
-
-
-    // 分配segment偏移数组 以及复制
-    CUDA_CHECK(cudaMalloc(&h_gpu_data.letter_seg_offsets, q.m.letters.size() * sizeof(int)));
-    CUDA_CHECK(cudaMalloc(&h_gpu_data.digit_seg_offsets, q.m.digits.size() * sizeof(int)));
-    CUDA_CHECK(cudaMalloc(&h_gpu_data.symbol_seg_offsets, q.m.symbols.size() * sizeof(int)));
-    CUDA_CHECK(cudaMemcpy(h_gpu_data.letter_seg_offsets, letter_seg_offsets, q.m.letters.size() * sizeof(int), cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(h_gpu_data.digit_seg_offsets, digit_seg_offsets, q.m.digits.size() * sizeof(int), cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(h_gpu_data.symbol_seg_offsets, symbol_seg_offsets, q.m.symbols.size() * sizeof(int), cudaMemcpyHostToDevice));
-
-
-    //把结构体复制到gpu上
-    CUDA_CHECK(cudaMalloc(&d_gpu_data, sizeof(GpuOrderedValuesData)));
-    CUDA_CHECK(cudaMemcpy(d_gpu_data, &h_gpu_data, sizeof(GpuOrderedValuesData), cudaMemcpyHostToDevice));
-
-    // 释放CPU端的临时内存
-    delete[] letter_all_values;
-    delete[] digit_all_values;
-    delete[] symbol_all_values;
-    delete[] letter_value_offsets;
-    delete[] digits_value_offsets;
-    delete[] symbol_value_offsets;
-    delete[] letter_seg_offsets;
-    delete[] digit_seg_offsets;
-    delete[] symbol_seg_offsets;
-
-#ifdef DEBUG
-    cout << "GPU数据初始化完成，CPU临时内存已释放" << endl;
-#endif
-
-}
-
-void clean_gpu_ordered_values_data(
-    GpuOrderedValuesData * d_gpu_data
-){
-    if (d_gpu_data == nullptr) return;
-    
-#ifdef DEBUG
-    cout << "清理GPU ordered values 数据..." << endl;
-#endif
-
-    // 从GPU复制结构体到CPU以获取指针地址
-    GpuOrderedValuesData h_gpu_data;
-    CUDA_CHECK(cudaMemcpy(&h_gpu_data, d_gpu_data, sizeof(GpuOrderedValuesData), cudaMemcpyDeviceToHost));
-    
-    // 释放GPU上的各个数组
-    if (h_gpu_data.letter_all_values) {
-        CUDA_CHECK(cudaFree(h_gpu_data.letter_all_values));
-    }
-    if (h_gpu_data.digit_all_values) {
-        CUDA_CHECK(cudaFree(h_gpu_data.digit_all_values));
-    }
-    if (h_gpu_data.symbol_all_values) {
-        CUDA_CHECK(cudaFree(h_gpu_data.symbol_all_values));
-    }
-    
-    if (h_gpu_data.letter_value_offsets) {
-        CUDA_CHECK(cudaFree(h_gpu_data.letter_value_offsets));
-    }
-    if (h_gpu_data.digits_value_offsets) {
-        CUDA_CHECK(cudaFree(h_gpu_data.digits_value_offsets));
-    }
-    if (h_gpu_data.symbol_value_offsets) {
-        CUDA_CHECK(cudaFree(h_gpu_data.symbol_value_offsets));
-    }
-    
-    if (h_gpu_data.letter_seg_offsets) {
-        CUDA_CHECK(cudaFree(h_gpu_data.letter_seg_offsets));
-    }
-    if (h_gpu_data.digit_seg_offsets) {
-        CUDA_CHECK(cudaFree(h_gpu_data.digit_seg_offsets));
-    }
-    if (h_gpu_data.symbol_seg_offsets) {
-        CUDA_CHECK(cudaFree(h_gpu_data.symbol_seg_offsets));
-    }
-    
-    // 释放结构体本身
-    CUDA_CHECK(cudaFree(d_gpu_data));
-
-#ifdef DEBUG
-    cout << "GPU ordered values 数据清理完成" << endl;
-#endif
-}
 
 
 void TaskManager::add_task(segment* seg, string prefix, PriorityQueue& q){
@@ -325,6 +81,8 @@ void TaskManager::add_task(segment* seg, string prefix, PriorityQueue& q){
     // } 
     //这个逻辑写外面吧
 }
+
+
 
 void TaskManager::launch_gpu_kernel(vector<string>& guesses){
     //1. 准备数据
@@ -555,9 +313,23 @@ void TaskManager::launch_gpu_kernel(vector<string>& guesses){
     CUDA_CHECK(cudaFree(d_tasks));
     CUDA_CHECK(cudaFree(d_guess_buffer));
     
+    // 将指针置空以避免悬空指针
+    temp_prefixs = nullptr;
+    temp.seg_types = nullptr;
+    temp.seg_ids = nullptr;
+    temp.seg_lens = nullptr;
+    temp.prefix_offsets = nullptr;
+    temp.prefix_lens = nullptr;
+    temp.seg_value_counts = nullptr;
+    temp.prefixs = nullptr;
+    d_tasks = nullptr;
+    d_guess_buffer = nullptr;
+    
     // 释放CPU内存
     delete[] h_guess_buffer;
     delete[] h_tasks.prefix_offsets;
+    h_guess_buffer = nullptr;
+    h_tasks.prefix_offsets = nullptr;
 
 #ifdef DEBUG
     cout << "GPU内存释放完成" << endl;
@@ -581,10 +353,6 @@ void TaskManager::clean() {
     seg_value_count.clear();
 
 }
-
-
-
-
 
 
 void TaskManager::print() {
@@ -622,3 +390,272 @@ void TaskManager::print() {
     cout << endl;
 
 }
+
+
+
+
+
+void init_gpu_ordered_values_data(GpuOrderedValuesData*& d_gpu_data,PriorityQueue& q) {
+    //cpu上的数据
+    GpuOrderedValuesData h_gpu_data;
+
+    // 计算char*数组总长度
+    size_t total_letter_length = 0;
+    size_t total_digit_length = 0;
+    size_t total_symbol_length = 0;
+
+    // 有多少个各类型的 value 
+    size_t letter_offsetarr_length = 0;
+    size_t digit_offsetarr_length = 0;
+    size_t symbol_offsetarr_length = 0;
+
+    char* letter_all_values = nullptr;// 把各个segment 的ordered_values展平
+    char* digit_all_values= nullptr;
+    char* symbol_all_values= nullptr;
+
+    int* letter_value_offsets= nullptr; // 每个ordered_value在letter_all_values中的起始
+    int* digits_value_offsets= nullptr; // 每个ordered_value在digit_all_values中的起始位置
+    int* symbol_value_offsets= nullptr; // 每个ordered_value在symbol_all_values中的起始
+
+    int* letter_seg_offsets= nullptr; // 每个letter segment第一个ordered_value在value_offsets中的是哪
+    int* digit_seg_offsets= nullptr; // 每个digit segment第一个ordered_value在value_offsets中的是哪个
+    int* symbol_seg_offsets= nullptr; // 每个symbol segment第一个ordered_value在value_offsets
+
+    for (const auto& seg : q.m.letters) {
+        total_letter_length += seg.ordered_values.size() * seg.length;
+        letter_offsetarr_length += seg.ordered_values.size();
+    }
+    for (const auto& seg : q.m.digits) {
+        total_digit_length += seg.ordered_values.size()* seg.length;
+        digit_offsetarr_length += seg.ordered_values.size();
+    }
+    for (const auto& seg : q.m.symbols) {
+        total_symbol_length += seg.ordered_values.size()* seg.length;
+        symbol_offsetarr_length += seg.ordered_values.size();
+    }
+
+    letter_all_values = new char[total_letter_length];
+    letter_value_offsets = new int[letter_offsetarr_length+1];
+    letter_seg_offsets = new int[q.m.letters.size()+1];
+
+    digit_all_values = new char[total_digit_length];
+    digits_value_offsets = new int[digit_offsetarr_length+1];
+    digit_seg_offsets = new int[q.m.digits.size()+1];
+
+    symbol_all_values = new char[total_symbol_length];
+    symbol_value_offsets = new int[symbol_offsetarr_length+1];
+    symbol_seg_offsets = new int[q.m.symbols.size()+1]; 
+    // 多补了一个offset 来表示末尾，实际不对应segment 以及 value
+
+    int value_offset = 0;
+    int seg_offset  = 0;
+
+    for(int i = 0 ;i < q.m.letters.size() ;i++) {
+        letter_seg_offsets[i] = seg_offset;
+        const auto& seg = q.m.letters[i];
+        for (int j =0 ;j < seg.ordered_values.size();j++ ){
+            letter_value_offsets[seg_offset++] = value_offset;
+            string value = seg.ordered_values[j];
+            for(int k =0; k < value.length(); k++) {
+                letter_all_values[value_offset++] = value[k];
+            }
+        }
+    }
+    letter_seg_offsets[q.m.letters.size()] = seg_offset; // 最后补一下...其实对应长度为0
+    letter_value_offsets[letter_offsetarr_length] = value_offset;
+    seg_offset = 0;
+    value_offset = 0;
+
+    for (int i=0;i< q.m.digits.size();i++) {
+        digit_seg_offsets[i] = seg_offset;
+        const auto& seg = q.m.digits[i];
+        seg_offset += seg.ordered_values.size();
+        for (int j=0; j< seg.ordered_values.size();j++ ) {
+            digits_value_offsets[seg_offset++] = value_offset;
+            string value = seg.ordered_values[j];
+            for(int k = 0;k < value.length(); k++) {
+                digit_all_values[value_offset++] = value[k];
+            }
+        }
+    }
+    digit_seg_offsets[q.m.digits.size()] = seg_offset; // 最后补一下...其实对应长度为0
+    digits_value_offsets[digit_offsetarr_length] = value_offset;
+    seg_offset = 0;
+    value_offset = 0;   
+
+
+    for (int i=0;i< q.m.symbols.size();i++) {
+        symbol_seg_offsets[i] = seg_offset;
+        const auto& seg = q.m.symbols[i];
+        seg_offset += seg.ordered_values.size();
+        for (int j=0; j< seg.ordered_values.size();j++ ) {
+            symbol_value_offsets[seg_offset++] = value_offset;
+            string value = seg.ordered_values[j];
+            for(int k = 0;k < value.length(); k++) {
+                symbol_all_values[value_offset++] = value[k];
+            }
+        }
+    }
+    symbol_seg_offsets[q.m.symbols.size()] = seg_offset; // 最后补一下
+    symbol_value_offsets[symbol_offsetarr_length] = value_offset;
+
+
+
+    // 相关东西都要的是地址。。。。。。。 指针只是指针， 解释成cpu or gpu 的内存 ，是看具体情景
+    // 比如cudaMemcpy 用cudaMemcpyKind kind 来区分。
+
+    //把各个指针相应数据复制到gpu上
+#ifdef DEBUG
+    printf("total_letter_length: %zu\n", total_letter_length);
+    printf("total_digit_length: %zu\n", total_digit_length);
+    printf("total_symbol_length: %zu\n", total_symbol_length);
+    printf("letter_offsetarr_length: %zu\n", letter_offsetarr_length);
+    printf("digit_offsetarr_length: %zu\n", digit_offsetarr_length);
+    printf("symbol_offsetarr_length: %zu\n", symbol_offsetarr_length);
+
+    //TODO 也许可以打印一下 q.m. 里面的那些长度看看有没有问题。
+
+    // 看看letter 的前十个是否有问题。
+    for(int i=0;i<10;i++){
+        segment& seg = q.m.letters[i];  
+        seg.PrintSeg();
+        seg.PrintValues();
+        for(int j = 0; j < seg.ordered_values.size(); j++) {
+            string letter_value(h_gpu_data.letter_all_values + 
+                h_gpu_data.letter_value_offsets[h_gpu_data.letter_seg_offsets[i]] + 
+                j * seg.length, seg.length );
+            cout << letter_value << " ";
+        }
+        cout << endl <<endl;
+    }
+
+    // 另外俩也可以以类似方式看是否有问题。
+#endif
+    // 分配内存 以及复制
+    CUDA_CHECK(cudaMalloc(&h_gpu_data.letter_all_values, total_letter_length * sizeof(char)));
+    CUDA_CHECK(cudaMalloc(&h_gpu_data.digit_all_values, total_digit_length * sizeof(char)));
+    CUDA_CHECK(cudaMalloc(&h_gpu_data.symbol_all_values, total_symbol_length * sizeof(char)));
+    CUDA_CHECK(cudaMemcpy(h_gpu_data.letter_all_values, letter_all_values, total_letter_length * sizeof(char), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(h_gpu_data.digit_all_values, digit_all_values, total_digit_length * sizeof(char), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(h_gpu_data.symbol_all_values, symbol_all_values, total_symbol_length * sizeof(char), cudaMemcpyHostToDevice));
+
+    // 分配偏移数组 以及复制
+    CUDA_CHECK(cudaMalloc(&h_gpu_data.letter_value_offsets, (letter_offsetarr_length+1)* sizeof(int)));
+    CUDA_CHECK(cudaMalloc(&h_gpu_data.digits_value_offsets, (digit_offsetarr_length+1) * sizeof(int)));
+    CUDA_CHECK(cudaMalloc(&h_gpu_data.symbol_value_offsets, (symbol_offsetarr_length+1) * sizeof(int)));
+    CUDA_CHECK(cudaMemcpy(h_gpu_data.letter_value_offsets, letter_value_offsets, (letter_offsetarr_length+1)* sizeof(int), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(h_gpu_data.digits_value_offsets, digits_value_offsets, (digit_offsetarr_length+1) * sizeof(int), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(h_gpu_data.symbol_value_offsets, symbol_value_offsets, (symbol_offsetarr_length+1) * sizeof(int), cudaMemcpyHostToDevice));
+
+
+    // 分配segment偏移数组 以及复制
+    CUDA_CHECK(cudaMalloc(&h_gpu_data.letter_seg_offsets, q.m.letters.size() * sizeof(int)));
+    CUDA_CHECK(cudaMalloc(&h_gpu_data.digit_seg_offsets, q.m.digits.size() * sizeof(int)));
+    CUDA_CHECK(cudaMalloc(&h_gpu_data.symbol_seg_offsets, q.m.symbols.size() * sizeof(int)));
+    CUDA_CHECK(cudaMemcpy(h_gpu_data.letter_seg_offsets, letter_seg_offsets, q.m.letters.size() * sizeof(int), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(h_gpu_data.digit_seg_offsets, digit_seg_offsets, q.m.digits.size() * sizeof(int), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(h_gpu_data.symbol_seg_offsets, symbol_seg_offsets, q.m.symbols.size() * sizeof(int), cudaMemcpyHostToDevice));
+
+
+    //把结构体复制到gpu上
+    CUDA_CHECK(cudaMalloc(&d_gpu_data, sizeof(GpuOrderedValuesData)));
+    CUDA_CHECK(cudaMemcpy(d_gpu_data, &h_gpu_data, sizeof(GpuOrderedValuesData), cudaMemcpyHostToDevice));
+
+    // 释放CPU端的临时内存
+    delete[] letter_all_values;
+    delete[] digit_all_values;
+    delete[] symbol_all_values;
+    delete[] letter_value_offsets;
+    delete[] digits_value_offsets;
+    delete[] symbol_value_offsets;
+    delete[] letter_seg_offsets;
+    delete[] digit_seg_offsets;
+    delete[] symbol_seg_offsets;
+
+#ifdef DEBUG
+    cout << "GPU数据初始化完成，CPU临时内存已释放" << endl;
+#endif
+
+}
+
+void clean_gpu_ordered_values_data(GpuOrderedValuesData *& d_gpu_data){
+    if (d_gpu_data == nullptr) return;
+    
+#ifdef DEBUG
+    cout << "清理GPU ordered values 数据..." << endl;
+#endif
+
+    // 从GPU复制结构体到CPU以获取指针地址
+    GpuOrderedValuesData h_gpu_data;
+    CUDA_CHECK(cudaMemcpy(&h_gpu_data, d_gpu_data, sizeof(GpuOrderedValuesData), cudaMemcpyDeviceToHost));
+    
+    // 释放GPU上的各个数组
+    if (h_gpu_data.letter_all_values) {
+        CUDA_CHECK(cudaFree(h_gpu_data.letter_all_values));
+        h_gpu_data.letter_all_values = nullptr;
+    }
+    if (h_gpu_data.digit_all_values) {
+        CUDA_CHECK(cudaFree(h_gpu_data.digit_all_values));
+        h_gpu_data.digit_all_values = nullptr;
+    }
+    if (h_gpu_data.symbol_all_values) {
+        CUDA_CHECK(cudaFree(h_gpu_data.symbol_all_values));
+        h_gpu_data.symbol_all_values = nullptr;
+    }
+    
+    if (h_gpu_data.letter_value_offsets) {
+        CUDA_CHECK(cudaFree(h_gpu_data.letter_value_offsets));
+        h_gpu_data.letter_value_offsets = nullptr;
+    }
+    if (h_gpu_data.digits_value_offsets) {
+        CUDA_CHECK(cudaFree(h_gpu_data.digits_value_offsets));
+        h_gpu_data.digits_value_offsets = nullptr;
+    }
+    if (h_gpu_data.symbol_value_offsets) {
+        CUDA_CHECK(cudaFree(h_gpu_data.symbol_value_offsets));
+        h_gpu_data.symbol_value_offsets = nullptr;
+    }
+    
+    if (h_gpu_data.letter_seg_offsets) {
+        CUDA_CHECK(cudaFree(h_gpu_data.letter_seg_offsets));
+        h_gpu_data.letter_seg_offsets = nullptr;
+    }
+    if (h_gpu_data.digit_seg_offsets) {
+        CUDA_CHECK(cudaFree(h_gpu_data.digit_seg_offsets));
+        h_gpu_data.digit_seg_offsets = nullptr;
+    }
+    if (h_gpu_data.symbol_seg_offsets) {
+        CUDA_CHECK(cudaFree(h_gpu_data.symbol_seg_offsets));
+        h_gpu_data.symbol_seg_offsets = nullptr;
+    }
+    
+    // 释放结构体本身
+    CUDA_CHECK(cudaFree(d_gpu_data));
+    d_gpu_data = nullptr;
+
+#ifdef DEBUG
+    cout << "GPU ordered values 数据清理完成" << endl;
+#endif
+}
+
+// 清理全局变量的函数
+void cleanup_global_cuda_resources() {
+    if (gpu_data != nullptr) {
+        clean_gpu_ordered_values_data(gpu_data);
+        gpu_data = nullptr;
+    }
+    
+    if (task_manager != nullptr) {
+        delete task_manager;
+        task_manager = nullptr;
+    }
+    
+#ifdef DEBUG
+    cout << "全局CUDA资源清理完成" << endl;
+#endif
+}
+
+
+
+
+
