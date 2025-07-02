@@ -4,6 +4,7 @@
 #include <iomanip>
 #include "config.h"
 #include "guessing_cuda.h"
+#include <string_view>
 
 // avx
 #ifdef USING_SIMD
@@ -18,9 +19,20 @@
 using namespace std;
 using namespace chrono;
 
-#ifdef TIME_COUNT
+//BUG 需要确保 产生的 猜测 每次 都 大于 1000000 ， 因为我只管理了一个 这个指针
+// 然后需要每次生成猜测， 都把所有hash掉。
+extern char* h_guess_buffer;
+
+// #ifdef TIME_COUNT
 extern double time_add_task;
-#endif
+extern double time_launch_task;
+extern double time_before_launch;
+extern double time_after_launch;
+extern double time_all_batch;
+extern double time_string_process;
+extern double time_memcpy_toh;
+extern double time_gpu_kernel;
+// #endif
 
 // 实验配置数组，每一组包含两个参数：总生成数量和批处理大小
 struct ExperimentConfig {
@@ -131,7 +143,9 @@ cout << "time transfer gpu :" << time_transfergpu << endl;
         auto start = system_clock::now();
         int history = 0;
 
-        
+double time_guess_part = 0; // 新增，专门记录猜测部分时间
+auto guess_start = system_clock::now();
+
         while (!q.priority.empty())
         {
 #ifdef TIME_COUNT
@@ -159,7 +173,12 @@ auto start_check = system_clock::now();
                     auto end = system_clock::now();
                     auto duration = duration_cast<microseconds>(end - start);
                     time_guess = double(duration.count()) * microseconds::period::num / microseconds::period::den;
-                    
+
+// 结束猜测部分计时
+auto guess_end = system_clock::now();
+auto guess_duration = duration_cast<microseconds>(guess_end - guess_start);
+time_guess_part += double(guess_duration.count()) * microseconds::period::num / microseconds::period::den;
+
                     cout << "\n--- 实验结果 ---" << endl;
                     cout << "猜测上限: " << GENERATE_N << ", 批处理大小: " << NUM_PER_HASH << endl;
                     cout << "Guesses generated: " << history + q.total_guesses << endl;
@@ -167,10 +186,21 @@ auto start_check = system_clock::now();
                     cout << "Hash time: " << time_hash << " seconds" << endl;
                     cout << "Train time: " << time_train << " seconds" << endl;
                     cout << "Total time: " << time_guess << " seconds" << endl;
+                    cout << "Real Guess time: " << time_guess_part << " seconds" << endl;
+
 #ifdef TIME_COUNT
-cout << "time all pop_next  :" << time_pop_next << endl <<endl;
-cout << "time all check  :" << time_check << endl <<endl;
-cout << "time all addtask:" << time_add_task <<endl <<endl;
+cout << "time all pop_next  :" << time_pop_next << endl;
+cout << "time all check  :" << time_check << endl;
+cout << "time gpu_kernel :" << time_gpu_kernel << endl ;
+cout << "time_add_task:" << time_add_task << endl ;
+cout << "time_launch_task:" << time_launch_task << endl ;
+cout << "time_before_launch : " << time_before_launch  << endl ;
+cout << "time_after_launch : " << time_after_launch  << endl ;
+cout << "time_string_process: " << time_string_process << endl ;
+cout << "time_memcpy_toh :" << time_memcpy_toh << endl ;
+
+cout << "time_all_batch:" << time_all_batch << endl << endl ;
+
 #endif
                     cout << "-------------------" << endl;
                     
@@ -183,14 +213,21 @@ auto duration_check = duration_cast<microseconds>(end_check - start_check);
 time_check += double(duration_check.count()) * microseconds::period::num / microseconds::period::den;
 #endif
 
+            //BUG 需要确保每次都大于
             // 达到批处理大小，进行哈希计算
             if (curr_num > NUM_PER_HASH)
             {
+// 哈希开始，结束当前猜测部分计时
+auto guess_end = system_clock::now();
+auto guess_duration = duration_cast<microseconds>(guess_end - guess_start);
+time_guess_part += double(guess_duration.count()) * microseconds::period::num / microseconds::period::den;
+
                 auto start_hash = system_clock::now();
                 
                 #ifdef USING_SIMD
 
                                 
+                //TODO 用string_view 可能有问题。
                 // 使用AVX进行批处理
                 for(size_t i = 0; i < q.guesses.size(); i += 8) {
                     string passwords[8] = {"", "", "", "", "", "", "", ""};
@@ -209,7 +246,7 @@ time_check += double(duration_check.count()) * microseconds::period::num / micro
                 // 使用标准MD5计算
                 bit32 state[4];
                 
-                for (string pw : q.guesses)
+                for (string_view pw : q.guesses)
                 {
                     MD5Hash(pw, state);
                 }
@@ -224,6 +261,11 @@ time_check += double(duration_check.count()) * microseconds::period::num / micro
                 history += curr_num;
                 curr_num = 0;
                 q.guesses.clear();
+                delete[]h_guess_buffer;
+                h_guess_buffer = nullptr;
+// 哈希完成，重新开始计时新的猜测部分
+guess_start = system_clock::now();
+
             }
         }
 
