@@ -1,0 +1,165 @@
+
+--- 标准 MD5 CUDA 实验批次 [Wed Jul  2 17:55:46 2025
+] ---
+Training...
+Training phase 1: reading and parsing passwords...
+Training phase 2: Ordering segment values and PTs...
+total pts18966
+Ordering letters
+Ordering digits
+ordering symbols
+模型训练完成，耗时: 12.8206 秒
+
+==========================================
+实验 #1: 数据集/小批次
+猜测上限: 10000000, 批处理大小: 1000000， GPU批处理大小：13000000
+==========================================
+time launch one batch :0.004307
+
+--- 实验结果 ---
+猜测上限: 10000000, 批处理大小: 1000000
+Guesses generated: 13092994
+Guess time: 1.06096 seconds
+Hash time: 0 seconds
+Train time: 12.8206 seconds
+Total time: 1.06096 seconds
+-------------------
+
+==========================================
+实验 #2: 数据集/小批次
+猜测上限: 15000000, 批处理大小: 1000000， GPU批处理大小：13000000
+==========================================
+time launch one batch :0.004302
+time launch one batch :0.00433
+
+--- 实验结果 ---
+猜测上限: 15000000, 批处理大小: 1000000
+Guesses generated: 26212240
+Guess time: 0.976307 seconds
+Hash time: 2.91467 seconds
+Train time: 12.8206 seconds
+Total time: 3.89098 seconds
+-------------------
+
+==========================================
+实验 #3: 数据集/小批次
+猜测上限: 20000000, 批处理大小: 1000000， GPU批处理大小：13000000
+==========================================
+time launch one batch :0.004303
+time launch one batch :0.004318
+
+--- 实验结果 ---
+猜测上限: 20000000, 批处理大小: 1000000
+Guesses generated: 26212240
+Guess time: 0.974353 seconds
+Hash time: 2.92706 seconds
+Train time: 12.8206 seconds
+Total time: 3.90141 seconds
+-------------------
+
+==========================================
+实验 #4: 数据集/小批次
+猜测上限: 25000000, 批处理大小: 1000000， GPU批处理大小：13000000
+==========================================
+time launch one batch :0.004299
+time launch one batch :0.004335
+
+--- 实验结果 ---
+猜测上限: 25000000, 批处理大小: 1000000
+Guesses generated: 26212240
+Guess time: 0.973171 seconds
+Hash time: 2.94091 seconds
+Train time: 12.8206 seconds
+Total time: 3.91408 seconds
+-------------------
+
+==========================================
+实验 #5: 数据集/小批次
+猜测上限: 30000000, 批处理大小: 1000000， GPU批处理大小：13000000
+==========================================
+time launch one batch :0.004291
+time launch one batch :0.004332
+time launch one batch :0.001974
+
+--- 实验结果 ---
+猜测上限: 30000000, 批处理大小: 1000000
+Guesses generated: 39276457
+Guess time: 1.43554 seconds
+Hash time: 5.83711 seconds
+Train time: 12.8206 seconds
+Total time: 7.27265 seconds
+-------------------
+
+==========================================
+实验 #6: 数据集/小批次
+猜测上限: 35000000, 批处理大小: 1000000， GPU批处理大小：13000000
+==========================================
+time launch one batch :0.004281
+time launch one batch :0.004325
+time launch one batch :0.004286
+
+--- 实验结果 ---
+猜测上限: 35000000, 批处理大小: 1000000
+Guesses generated: 39276457
+Guess time: 1.43799 seconds
+Hash time: 5.83978 seconds
+Train time: 12.8206 seconds
+Total time: 7.27777 seconds
+-------------------
+
+==========================================
+实验 #7: 数据集/小批次
+猜测上限: 40000000, 批处理大小: 1000000， GPU批处理大小：13000000
+==========================================
+time launch one batch :0.004298
+time launch one batch :0.004321
+time launch one batch :0.001974
+time launch one batch :0.004296
+
+--- 实验结果 ---
+猜测上限: 40000000, 批处理大小: 1000000
+Guesses generated: 52357499
+Guess time: 1.93893 seconds
+Hash time: 8.74864 seconds
+Train time: 12.8206 seconds
+Total time: 10.6876 seconds
+-------------------
+
+==========================================
+实验 #8: 数据集/小批次
+猜测上限: 45000000, 批处理大小: 1000000， GPU批处理大小：13000000
+==========================================
+time launch one batch :0.004287
+time launch one batch :0.004353
+time launch one batch :0.004281
+time launch one batch :0.004285
+
+--- 实验结果 ---
+猜测上限: 45000000, 批处理大小: 1000000
+Guesses generated: 52357499
+Guess time: 1.93985 seconds
+Hash time: 8.74354 seconds
+Train time: 12.8206 seconds
+Total time: 10.6834 seconds
+-------------------
+
+==========================================
+实验 #9: 数据集/小批次
+猜测上限: 50000000, 批处理大小: 1000000， GPU批处理大小：13000000
+==========================================
+time launch one batch :0.004291
+time launch one batch :0.004317
+time launch one batch :0.00421
+time launch one batch :0.004294
+
+--- 实验结果 ---
+猜测上限: 50000000, 批处理大小: 1000000
+Guesses generated: 52357499
+Guess time: 1.94171 seconds
+Hash time: 8.7456 seconds
+Train time: 12.8206 seconds
+Total time: 10.6873 seconds
+-------------------
+
+--- 实验批次结束 ---
+

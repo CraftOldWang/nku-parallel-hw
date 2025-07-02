@@ -1,0 +1,1066 @@
+
+--- 标准 MD5 CUDA 实验批次 [Wed Jul  2 16:50:42 2025
+] ---
+Training...
+Training phase 1: reading and parsing passwords...
+Training phase 2: Ordering segment values and PTs...
+total pts18966
+Ordering letters
+Ordering digits
+ordering symbols
+模型训练完成，耗时: 12.5843 秒
+
+==========================================
+实验 #1: 数据集/小批次
+猜测上限: 100000000, 批处理大小: 10000000， GPU批处理大小：2000000
+==========================================
+启动kernel: blocks=2050, threads_per_block=1024
+总线程数: 2099200, guess数量: 2099050
+启动kernel: blocks=1954, threads_per_block=1024
+总线程数: 2000896, guess数量: 2000849
+启动kernel: blocks=2013, threads_per_block=1024
+总线程数: 2061312, guess数量: 2060301
+启动kernel: blocks=1973, threads_per_block=1024
+总线程数: 2020352, guess数量: 2020313
+启动kernel: blocks=2017, threads_per_block=1024
+总线程数: 2065408, guess数量: 2064778
+启动kernel: blocks=2042, threads_per_block=1024
+总线程数: 2091008, guess数量: 2090829
+启动kernel: blocks=1963, threads_per_block=1024
+总线程数: 2010112, guess数量: 2009358
+启动kernel: blocks=1973, threads_per_block=1024
+总线程数: 2020352, guess数量: 2019966
+启动kernel: blocks=1964, threads_per_block=1024
+总线程数: 2011136, guess数量: 2010760
+启动kernel: blocks=2025, threads_per_block=1024
+总线程数: 2073600, guess数量: 2072827
+启动kernel: blocks=2026, threads_per_block=1024
+总线程数: 2074624, guess数量: 2074016
+启动kernel: blocks=1955, threads_per_block=1024
+总线程数: 2001920, guess数量: 2001409
+启动kernel: blocks=2003, threads_per_block=1024
+总线程数: 2051072, guess数量: 2050396
+启动kernel: blocks=2033, threads_per_block=1024
+总线程数: 2081792, guess数量: 2081584
+启动kernel: blocks=1996, threads_per_block=1024
+总线程数: 2043904, guess数量: 2043395
+启动kernel: blocks=1961, threads_per_block=1024
+总线程数: 2008064, guess数量: 2007166
+启动kernel: blocks=1958, threads_per_block=1024
+总线程数: 2004992, guess数量: 2004679
+启动kernel: blocks=2008, threads_per_block=1024
+总线程数: 2056192, guess数量: 2055191
+启动kernel: blocks=2002, threads_per_block=1024
+总线程数: 2050048, guess数量: 2049904
+启动kernel: blocks=1989, threads_per_block=1024
+总线程数: 2036736, guess数量: 2036195
+启动kernel: blocks=1977, threads_per_block=1024
+总线程数: 2024448, guess数量: 2023583
+启动kernel: blocks=1981, threads_per_block=1024
+总线程数: 2028544, guess数量: 2028227
+启动kernel: blocks=1963, threads_per_block=1024
+总线程数: 2010112, guess数量: 2009461
+启动kernel: blocks=1990, threads_per_block=1024
+总线程数: 2037760, guess数量: 2037743
+启动kernel: blocks=1966, threads_per_block=1024
+总线程数: 2013184, guess数量: 2012373
+启动kernel: blocks=1997, threads_per_block=1024
+总线程数: 2044928, guess数量: 2044506
+启动kernel: blocks=2091, threads_per_block=1024
+总线程数: 2141184, guess数量: 2140873
+启动kernel: blocks=2078, threads_per_block=1024
+总线程数: 2127872, guess数量: 2127829
+启动kernel: blocks=2025, threads_per_block=1024
+总线程数: 2073600, guess数量: 2073274
+启动kernel: blocks=2014, threads_per_block=1024
+总线程数: 2062336, guess数量: 2061856
+启动kernel: blocks=1988, threads_per_block=1024
+总线程数: 2035712, guess数量: 2035129
+启动kernel: blocks=2060, threads_per_block=1024
+总线程数: 2109440, guess数量: 2108476
+启动kernel: blocks=2003, threads_per_block=1024
+总线程数: 2051072, guess数量: 2050468
+启动kernel: blocks=1959, threads_per_block=1024
+总线程数: 2006016, guess数量: 2005922
+启动kernel: blocks=2028, threads_per_block=1024
+总线程数: 2076672, guess数量: 2075939
+启动kernel: blocks=2081, threads_per_block=1024
+总线程数: 2130944, guess数量: 2130826
+启动kernel: blocks=1954, threads_per_block=1024
+总线程数: 2000896, guess数量: 2000607
+启动kernel: blocks=1963, threads_per_block=1024
+总线程数: 2010112, guess数量: 2009898
+启动kernel: blocks=2082, threads_per_block=1024
+总线程数: 2131968, guess数量: 2131230
+启动kernel: blocks=1979, threads_per_block=1024
+总线程数: 2026496, guess数量: 2025924
+启动kernel: blocks=2047, threads_per_block=1024
+总线程数: 2096128, guess数量: 2095972
+启动kernel: blocks=2091, threads_per_block=1024
+总线程数: 2141184, guess数量: 2140386
+启动kernel: blocks=1993, threads_per_block=1024
+总线程数: 2040832, guess数量: 2040019
+启动kernel: blocks=1978, threads_per_block=1024
+总线程数: 2025472, guess数量: 2025271
+启动kernel: blocks=2001, threads_per_block=1024
+总线程数: 2049024, guess数量: 2048668
+启动kernel: blocks=2061, threads_per_block=1024
+总线程数: 2110464, guess数量: 2110010
+启动kernel: blocks=2018, threads_per_block=1024
+总线程数: 2066432, guess数量: 2065800
+启动kernel: blocks=2018, threads_per_block=1024
+总线程数: 2066432, guess数量: 2065452
+启动kernel: blocks=1968, threads_per_block=1024
+总线程数: 2015232, guess数量: 2014408
+
+--- 实验结果 ---
+猜测上限: 100000000, 批处理大小: 10000000
+Guesses generated: 100593096
+Guess time: 3.7713 seconds
+Hash time: 20.9597 seconds
+Train time: 12.5843 seconds
+Total time: 24.731 seconds
+-------------------
+
+==========================================
+实验 #2: 数据集/小批次
+猜测上限: 150000000, 批处理大小: 10000000， GPU批处理大小：2000000
+==========================================
+启动kernel: blocks=2050, threads_per_block=1024
+总线程数: 2099200, guess数量: 2099050
+启动kernel: blocks=1954, threads_per_block=1024
+总线程数: 2000896, guess数量: 2000849
+启动kernel: blocks=2013, threads_per_block=1024
+总线程数: 2061312, guess数量: 2060301
+启动kernel: blocks=1973, threads_per_block=1024
+总线程数: 2020352, guess数量: 2020313
+启动kernel: blocks=2017, threads_per_block=1024
+总线程数: 2065408, guess数量: 2064778
+启动kernel: blocks=2042, threads_per_block=1024
+总线程数: 2091008, guess数量: 2090829
+启动kernel: blocks=1963, threads_per_block=1024
+总线程数: 2010112, guess数量: 2009358
+启动kernel: blocks=1973, threads_per_block=1024
+总线程数: 2020352, guess数量: 2019966
+启动kernel: blocks=1964, threads_per_block=1024
+总线程数: 2011136, guess数量: 2010760
+启动kernel: blocks=2025, threads_per_block=1024
+总线程数: 2073600, guess数量: 2072827
+启动kernel: blocks=2026, threads_per_block=1024
+总线程数: 2074624, guess数量: 2074016
+启动kernel: blocks=1955, threads_per_block=1024
+总线程数: 2001920, guess数量: 2001409
+启动kernel: blocks=2003, threads_per_block=1024
+总线程数: 2051072, guess数量: 2050396
+启动kernel: blocks=2033, threads_per_block=1024
+总线程数: 2081792, guess数量: 2081584
+启动kernel: blocks=1996, threads_per_block=1024
+总线程数: 2043904, guess数量: 2043395
+启动kernel: blocks=1961, threads_per_block=1024
+总线程数: 2008064, guess数量: 2007166
+启动kernel: blocks=1958, threads_per_block=1024
+总线程数: 2004992, guess数量: 2004679
+启动kernel: blocks=2008, threads_per_block=1024
+总线程数: 2056192, guess数量: 2055191
+启动kernel: blocks=2002, threads_per_block=1024
+总线程数: 2050048, guess数量: 2049904
+启动kernel: blocks=1989, threads_per_block=1024
+总线程数: 2036736, guess数量: 2036195
+启动kernel: blocks=1977, threads_per_block=1024
+总线程数: 2024448, guess数量: 2023583
+启动kernel: blocks=1981, threads_per_block=1024
+总线程数: 2028544, guess数量: 2028227
+启动kernel: blocks=1963, threads_per_block=1024
+总线程数: 2010112, guess数量: 2009461
+启动kernel: blocks=1990, threads_per_block=1024
+总线程数: 2037760, guess数量: 2037743
+启动kernel: blocks=1966, threads_per_block=1024
+总线程数: 2013184, guess数量: 2012373
+启动kernel: blocks=1997, threads_per_block=1024
+总线程数: 2044928, guess数量: 2044506
+启动kernel: blocks=2091, threads_per_block=1024
+总线程数: 2141184, guess数量: 2140873
+启动kernel: blocks=2078, threads_per_block=1024
+总线程数: 2127872, guess数量: 2127829
+启动kernel: blocks=2025, threads_per_block=1024
+总线程数: 2073600, guess数量: 2073274
+启动kernel: blocks=2014, threads_per_block=1024
+总线程数: 2062336, guess数量: 2061856
+启动kernel: blocks=1988, threads_per_block=1024
+总线程数: 2035712, guess数量: 2035129
+启动kernel: blocks=2060, threads_per_block=1024
+总线程数: 2109440, guess数量: 2108476
+启动kernel: blocks=2003, threads_per_block=1024
+总线程数: 2051072, guess数量: 2050468
+启动kernel: blocks=1959, threads_per_block=1024
+总线程数: 2006016, guess数量: 2005922
+启动kernel: blocks=2028, threads_per_block=1024
+总线程数: 2076672, guess数量: 2075939
+启动kernel: blocks=2081, threads_per_block=1024
+总线程数: 2130944, guess数量: 2130826
+启动kernel: blocks=1954, threads_per_block=1024
+总线程数: 2000896, guess数量: 2000607
+启动kernel: blocks=1963, threads_per_block=1024
+总线程数: 2010112, guess数量: 2009898
+启动kernel: blocks=2082, threads_per_block=1024
+总线程数: 2131968, guess数量: 2131230
+启动kernel: blocks=1979, threads_per_block=1024
+总线程数: 2026496, guess数量: 2025924
+启动kernel: blocks=2047, threads_per_block=1024
+总线程数: 2096128, guess数量: 2095972
+启动kernel: blocks=2091, threads_per_block=1024
+总线程数: 2141184, guess数量: 2140386
+启动kernel: blocks=1993, threads_per_block=1024
+总线程数: 2040832, guess数量: 2040019
+启动kernel: blocks=1978, threads_per_block=1024
+总线程数: 2025472, guess数量: 2025271
+启动kernel: blocks=2001, threads_per_block=1024
+总线程数: 2049024, guess数量: 2048668
+启动kernel: blocks=2061, threads_per_block=1024
+总线程数: 2110464, guess数量: 2110010
+启动kernel: blocks=2018, threads_per_block=1024
+总线程数: 2066432, guess数量: 2065800
+启动kernel: blocks=2018, threads_per_block=1024
+总线程数: 2066432, guess数量: 2065452
+启动kernel: blocks=1968, threads_per_block=1024
+总线程数: 2015232, guess数量: 2014408
+启动kernel: blocks=2083, threads_per_block=1024
+总线程数: 2132992, guess数量: 2132652
+启动kernel: blocks=1967, threads_per_block=1024
+总线程数: 2014208, guess数量: 2014024
+启动kernel: blocks=1954, threads_per_block=1024
+总线程数: 2000896, guess数量: 2000210
+启动kernel: blocks=1968, threads_per_block=1024
+总线程数: 2015232, guess数量: 2014513
+启动kernel: blocks=1969, threads_per_block=1024
+总线程数: 2016256, guess数量: 2015402
+启动kernel: blocks=1976, threads_per_block=1024
+总线程数: 2023424, guess数量: 2022963
+启动kernel: blocks=1995, threads_per_block=1024
+总线程数: 2042880, guess数量: 2042222
+启动kernel: blocks=1954, threads_per_block=1024
+总线程数: 2000896, guess数量: 2000466
+启动kernel: blocks=1993, threads_per_block=1024
+总线程数: 2040832, guess数量: 2040158
+启动kernel: blocks=2001, threads_per_block=1024
+总线程数: 2049024, guess数量: 2048251
+启动kernel: blocks=1968, threads_per_block=1024
+总线程数: 2015232, guess数量: 2014584
+启动kernel: blocks=1963, threads_per_block=1024
+总线程数: 2010112, guess数量: 2009773
+启动kernel: blocks=1978, threads_per_block=1024
+总线程数: 2025472, guess数量: 2025347
+启动kernel: blocks=1976, threads_per_block=1024
+总线程数: 2023424, guess数量: 2022401
+启动kernel: blocks=1961, threads_per_block=1024
+总线程数: 2008064, guess数量: 2007301
+启动kernel: blocks=1990, threads_per_block=1024
+总线程数: 2037760, guess数量: 2037069
+启动kernel: blocks=1960, threads_per_block=1024
+总线程数: 2007040, guess数量: 2006232
+启动kernel: blocks=2103, threads_per_block=1024
+总线程数: 2153472, guess数量: 2152948
+启动kernel: blocks=1959, threads_per_block=1024
+总线程数: 2006016, guess数量: 2005919
+启动kernel: blocks=1954, threads_per_block=1024
+总线程数: 2000896, guess数量: 2000252
+启动kernel: blocks=1979, threads_per_block=1024
+总线程数: 2026496, guess数量: 2025782
+启动kernel: blocks=1979, threads_per_block=1024
+总线程数: 2026496, guess数量: 2026271
+启动kernel: blocks=1988, threads_per_block=1024
+总线程数: 2035712, guess数量: 2035244
+启动kernel: blocks=1979, threads_per_block=1024
+总线程数: 2026496, guess数量: 2025834
+启动kernel: blocks=2096, threads_per_block=1024
+总线程数: 2146304, guess数量: 2145741
+
+--- 实验结果 ---
+猜测上限: 150000000, 批处理大小: 10000000
+Guesses generated: 151464655
+Guess time: 4.98057 seconds
+Hash time: 32.5105 seconds
+Train time: 12.5843 seconds
+Total time: 37.4911 seconds
+-------------------
+
+==========================================
+实验 #3: 数据集/小批次
+猜测上限: 200000000, 批处理大小: 10000000， GPU批处理大小：2000000
+==========================================
+启动kernel: blocks=2050, threads_per_block=1024
+总线程数: 2099200, guess数量: 2099050
+启动kernel: blocks=1954, threads_per_block=1024
+总线程数: 2000896, guess数量: 2000849
+启动kernel: blocks=2013, threads_per_block=1024
+总线程数: 2061312, guess数量: 2060301
+启动kernel: blocks=1973, threads_per_block=1024
+总线程数: 2020352, guess数量: 2020313
+启动kernel: blocks=2017, threads_per_block=1024
+总线程数: 2065408, guess数量: 2064778
+启动kernel: blocks=2042, threads_per_block=1024
+总线程数: 2091008, guess数量: 2090829
+启动kernel: blocks=1963, threads_per_block=1024
+总线程数: 2010112, guess数量: 2009358
+启动kernel: blocks=1973, threads_per_block=1024
+总线程数: 2020352, guess数量: 2019966
+启动kernel: blocks=1964, threads_per_block=1024
+总线程数: 2011136, guess数量: 2010760
+启动kernel: blocks=2025, threads_per_block=1024
+总线程数: 2073600, guess数量: 2072827
+启动kernel: blocks=2026, threads_per_block=1024
+总线程数: 2074624, guess数量: 2074016
+启动kernel: blocks=1955, threads_per_block=1024
+总线程数: 2001920, guess数量: 2001409
+启动kernel: blocks=2003, threads_per_block=1024
+总线程数: 2051072, guess数量: 2050396
+启动kernel: blocks=2033, threads_per_block=1024
+总线程数: 2081792, guess数量: 2081584
+启动kernel: blocks=1996, threads_per_block=1024
+总线程数: 2043904, guess数量: 2043395
+启动kernel: blocks=1961, threads_per_block=1024
+总线程数: 2008064, guess数量: 2007166
+启动kernel: blocks=1958, threads_per_block=1024
+总线程数: 2004992, guess数量: 2004679
+启动kernel: blocks=2008, threads_per_block=1024
+总线程数: 2056192, guess数量: 2055191
+启动kernel: blocks=2002, threads_per_block=1024
+总线程数: 2050048, guess数量: 2049904
+启动kernel: blocks=1989, threads_per_block=1024
+总线程数: 2036736, guess数量: 2036195
+启动kernel: blocks=1977, threads_per_block=1024
+总线程数: 2024448, guess数量: 2023583
+启动kernel: blocks=1981, threads_per_block=1024
+总线程数: 2028544, guess数量: 2028227
+启动kernel: blocks=1963, threads_per_block=1024
+总线程数: 2010112, guess数量: 2009461
+启动kernel: blocks=1990, threads_per_block=1024
+总线程数: 2037760, guess数量: 2037743
+启动kernel: blocks=1966, threads_per_block=1024
+总线程数: 2013184, guess数量: 2012373
+启动kernel: blocks=1997, threads_per_block=1024
+总线程数: 2044928, guess数量: 2044506
+启动kernel: blocks=2091, threads_per_block=1024
+总线程数: 2141184, guess数量: 2140873
+启动kernel: blocks=2078, threads_per_block=1024
+总线程数: 2127872, guess数量: 2127829
+启动kernel: blocks=2025, threads_per_block=1024
+总线程数: 2073600, guess数量: 2073274
+启动kernel: blocks=2014, threads_per_block=1024
+总线程数: 2062336, guess数量: 2061856
+启动kernel: blocks=1988, threads_per_block=1024
+总线程数: 2035712, guess数量: 2035129
+启动kernel: blocks=2060, threads_per_block=1024
+总线程数: 2109440, guess数量: 2108476
+启动kernel: blocks=2003, threads_per_block=1024
+总线程数: 2051072, guess数量: 2050468
+启动kernel: blocks=1959, threads_per_block=1024
+总线程数: 2006016, guess数量: 2005922
+启动kernel: blocks=2028, threads_per_block=1024
+总线程数: 2076672, guess数量: 2075939
+启动kernel: blocks=2081, threads_per_block=1024
+总线程数: 2130944, guess数量: 2130826
+启动kernel: blocks=1954, threads_per_block=1024
+总线程数: 2000896, guess数量: 2000607
+启动kernel: blocks=1963, threads_per_block=1024
+总线程数: 2010112, guess数量: 2009898
+启动kernel: blocks=2082, threads_per_block=1024
+总线程数: 2131968, guess数量: 2131230
+启动kernel: blocks=1979, threads_per_block=1024
+总线程数: 2026496, guess数量: 2025924
+启动kernel: blocks=2047, threads_per_block=1024
+总线程数: 2096128, guess数量: 2095972
+启动kernel: blocks=2091, threads_per_block=1024
+总线程数: 2141184, guess数量: 2140386
+启动kernel: blocks=1993, threads_per_block=1024
+总线程数: 2040832, guess数量: 2040019
+启动kernel: blocks=1978, threads_per_block=1024
+总线程数: 2025472, guess数量: 2025271
+启动kernel: blocks=2001, threads_per_block=1024
+总线程数: 2049024, guess数量: 2048668
+启动kernel: blocks=2061, threads_per_block=1024
+总线程数: 2110464, guess数量: 2110010
+启动kernel: blocks=2018, threads_per_block=1024
+总线程数: 2066432, guess数量: 2065800
+启动kernel: blocks=2018, threads_per_block=1024
+总线程数: 2066432, guess数量: 2065452
+启动kernel: blocks=1968, threads_per_block=1024
+总线程数: 2015232, guess数量: 2014408
+启动kernel: blocks=2083, threads_per_block=1024
+总线程数: 2132992, guess数量: 2132652
+启动kernel: blocks=1967, threads_per_block=1024
+总线程数: 2014208, guess数量: 2014024
+启动kernel: blocks=1954, threads_per_block=1024
+总线程数: 2000896, guess数量: 2000210
+启动kernel: blocks=1968, threads_per_block=1024
+总线程数: 2015232, guess数量: 2014513
+启动kernel: blocks=1969, threads_per_block=1024
+总线程数: 2016256, guess数量: 2015402
+启动kernel: blocks=1976, threads_per_block=1024
+总线程数: 2023424, guess数量: 2022963
+启动kernel: blocks=1995, threads_per_block=1024
+总线程数: 2042880, guess数量: 2042222
+启动kernel: blocks=1954, threads_per_block=1024
+总线程数: 2000896, guess数量: 2000466
+启动kernel: blocks=1993, threads_per_block=1024
+总线程数: 2040832, guess数量: 2040158
+启动kernel: blocks=2001, threads_per_block=1024
+总线程数: 2049024, guess数量: 2048251
+启动kernel: blocks=1968, threads_per_block=1024
+总线程数: 2015232, guess数量: 2014584
+启动kernel: blocks=1963, threads_per_block=1024
+总线程数: 2010112, guess数量: 2009773
+启动kernel: blocks=1978, threads_per_block=1024
+总线程数: 2025472, guess数量: 2025347
+启动kernel: blocks=1976, threads_per_block=1024
+总线程数: 2023424, guess数量: 2022401
+启动kernel: blocks=1961, threads_per_block=1024
+总线程数: 2008064, guess数量: 2007301
+启动kernel: blocks=1990, threads_per_block=1024
+总线程数: 2037760, guess数量: 2037069
+启动kernel: blocks=1960, threads_per_block=1024
+总线程数: 2007040, guess数量: 2006232
+启动kernel: blocks=2103, threads_per_block=1024
+总线程数: 2153472, guess数量: 2152948
+启动kernel: blocks=1959, threads_per_block=1024
+总线程数: 2006016, guess数量: 2005919
+启动kernel: blocks=1954, threads_per_block=1024
+总线程数: 2000896, guess数量: 2000252
+启动kernel: blocks=1979, threads_per_block=1024
+总线程数: 2026496, guess数量: 2025782
+启动kernel: blocks=1979, threads_per_block=1024
+总线程数: 2026496, guess数量: 2026271
+启动kernel: blocks=1988, threads_per_block=1024
+总线程数: 2035712, guess数量: 2035244
+启动kernel: blocks=1979, threads_per_block=1024
+总线程数: 2026496, guess数量: 2025834
+启动kernel: blocks=2096, threads_per_block=1024
+总线程数: 2146304, guess数量: 2145741
+启动kernel: blocks=1961, threads_per_block=1024
+总线程数: 2008064, guess数量: 2008022
+启动kernel: blocks=1955, threads_per_block=1024
+总线程数: 2001920, guess数量: 2001610
+启动kernel: blocks=2017, threads_per_block=1024
+总线程数: 2065408, guess数量: 2065061
+启动kernel: blocks=2048, threads_per_block=1024
+总线程数: 2097152, guess数量: 2096764
+启动kernel: blocks=1959, threads_per_block=1024
+总线程数: 2006016, guess数量: 2005055
+启动kernel: blocks=1978, threads_per_block=1024
+总线程数: 2025472, guess数量: 2024867
+启动kernel: blocks=1972, threads_per_block=1024
+总线程数: 2019328, guess数量: 2018422
+启动kernel: blocks=1956, threads_per_block=1024
+总线程数: 2002944, guess数量: 2002280
+启动kernel: blocks=2003, threads_per_block=1024
+总线程数: 2051072, guess数量: 2050747
+启动kernel: blocks=1960, threads_per_block=1024
+总线程数: 2007040, guess数量: 2006898
+启动kernel: blocks=1959, threads_per_block=1024
+总线程数: 2006016, guess数量: 2005192
+启动kernel: blocks=1961, threads_per_block=1024
+总线程数: 2008064, guess数量: 2007295
+启动kernel: blocks=1969, threads_per_block=1024
+总线程数: 2016256, guess数量: 2016064
+启动kernel: blocks=1973, threads_per_block=1024
+总线程数: 2020352, guess数量: 2019765
+启动kernel: blocks=1975, threads_per_block=1024
+总线程数: 2022400, guess数量: 2021487
+启动kernel: blocks=1980, threads_per_block=1024
+总线程数: 2027520, guess数量: 2026652
+启动kernel: blocks=1957, threads_per_block=1024
+总线程数: 2003968, guess数量: 2003202
+启动kernel: blocks=1981, threads_per_block=1024
+总线程数: 2028544, guess数量: 2027894
+启动kernel: blocks=1987, threads_per_block=1024
+总线程数: 2034688, guess数量: 2034418
+启动kernel: blocks=1965, threads_per_block=1024
+总线程数: 2012160, guess数量: 2011196
+启动kernel: blocks=1980, threads_per_block=1024
+总线程数: 2027520, guess数量: 2027479
+启动kernel: blocks=2008, threads_per_block=1024
+总线程数: 2056192, guess数量: 2055631
+启动kernel: blocks=1963, threads_per_block=1024
+总线程数: 2010112, guess数量: 2009579
+启动kernel: blocks=1981, threads_per_block=1024
+总线程数: 2028544, guess数量: 2028215
+
+--- 实验结果 ---
+猜测上限: 200000000, 批处理大小: 10000000
+Guesses generated: 200038450
+Guess time: 6.95423 seconds
+Hash time: 44.0072 seconds
+Train time: 12.5843 seconds
+Total time: 50.9614 seconds
+-------------------
+
+==========================================
+实验 #4: 数据集/小批次
+猜测上限: 250000000, 批处理大小: 10000000， GPU批处理大小：2000000
+==========================================
+启动kernel: blocks=2050, threads_per_block=1024
+总线程数: 2099200, guess数量: 2099050
+启动kernel: blocks=1954, threads_per_block=1024
+总线程数: 2000896, guess数量: 2000849
+启动kernel: blocks=2013, threads_per_block=1024
+总线程数: 2061312, guess数量: 2060301
+启动kernel: blocks=1973, threads_per_block=1024
+总线程数: 2020352, guess数量: 2020313
+启动kernel: blocks=2017, threads_per_block=1024
+总线程数: 2065408, guess数量: 2064778
+启动kernel: blocks=2042, threads_per_block=1024
+总线程数: 2091008, guess数量: 2090829
+启动kernel: blocks=1963, threads_per_block=1024
+总线程数: 2010112, guess数量: 2009358
+启动kernel: blocks=1973, threads_per_block=1024
+总线程数: 2020352, guess数量: 2019966
+启动kernel: blocks=1964, threads_per_block=1024
+总线程数: 2011136, guess数量: 2010760
+启动kernel: blocks=2025, threads_per_block=1024
+总线程数: 2073600, guess数量: 2072827
+启动kernel: blocks=2026, threads_per_block=1024
+总线程数: 2074624, guess数量: 2074016
+启动kernel: blocks=1955, threads_per_block=1024
+总线程数: 2001920, guess数量: 2001409
+启动kernel: blocks=2003, threads_per_block=1024
+总线程数: 2051072, guess数量: 2050396
+启动kernel: blocks=2033, threads_per_block=1024
+总线程数: 2081792, guess数量: 2081584
+启动kernel: blocks=1996, threads_per_block=1024
+总线程数: 2043904, guess数量: 2043395
+启动kernel: blocks=1961, threads_per_block=1024
+总线程数: 2008064, guess数量: 2007166
+启动kernel: blocks=1958, threads_per_block=1024
+总线程数: 2004992, guess数量: 2004679
+启动kernel: blocks=2008, threads_per_block=1024
+总线程数: 2056192, guess数量: 2055191
+启动kernel: blocks=2002, threads_per_block=1024
+总线程数: 2050048, guess数量: 2049904
+启动kernel: blocks=1989, threads_per_block=1024
+总线程数: 2036736, guess数量: 2036195
+启动kernel: blocks=1977, threads_per_block=1024
+总线程数: 2024448, guess数量: 2023583
+启动kernel: blocks=1981, threads_per_block=1024
+总线程数: 2028544, guess数量: 2028227
+启动kernel: blocks=1963, threads_per_block=1024
+总线程数: 2010112, guess数量: 2009461
+启动kernel: blocks=1990, threads_per_block=1024
+总线程数: 2037760, guess数量: 2037743
+启动kernel: blocks=1966, threads_per_block=1024
+总线程数: 2013184, guess数量: 2012373
+启动kernel: blocks=1997, threads_per_block=1024
+总线程数: 2044928, guess数量: 2044506
+启动kernel: blocks=2091, threads_per_block=1024
+总线程数: 2141184, guess数量: 2140873
+启动kernel: blocks=2078, threads_per_block=1024
+总线程数: 2127872, guess数量: 2127829
+启动kernel: blocks=2025, threads_per_block=1024
+总线程数: 2073600, guess数量: 2073274
+启动kernel: blocks=2014, threads_per_block=1024
+总线程数: 2062336, guess数量: 2061856
+启动kernel: blocks=1988, threads_per_block=1024
+总线程数: 2035712, guess数量: 2035129
+启动kernel: blocks=2060, threads_per_block=1024
+总线程数: 2109440, guess数量: 2108476
+启动kernel: blocks=2003, threads_per_block=1024
+总线程数: 2051072, guess数量: 2050468
+启动kernel: blocks=1959, threads_per_block=1024
+总线程数: 2006016, guess数量: 2005922
+启动kernel: blocks=2028, threads_per_block=1024
+总线程数: 2076672, guess数量: 2075939
+启动kernel: blocks=2081, threads_per_block=1024
+总线程数: 2130944, guess数量: 2130826
+启动kernel: blocks=1954, threads_per_block=1024
+总线程数: 2000896, guess数量: 2000607
+启动kernel: blocks=1963, threads_per_block=1024
+总线程数: 2010112, guess数量: 2009898
+启动kernel: blocks=2082, threads_per_block=1024
+总线程数: 2131968, guess数量: 2131230
+启动kernel: blocks=1979, threads_per_block=1024
+总线程数: 2026496, guess数量: 2025924
+启动kernel: blocks=2047, threads_per_block=1024
+总线程数: 2096128, guess数量: 2095972
+启动kernel: blocks=2091, threads_per_block=1024
+总线程数: 2141184, guess数量: 2140386
+启动kernel: blocks=1993, threads_per_block=1024
+总线程数: 2040832, guess数量: 2040019
+启动kernel: blocks=1978, threads_per_block=1024
+总线程数: 2025472, guess数量: 2025271
+启动kernel: blocks=2001, threads_per_block=1024
+总线程数: 2049024, guess数量: 2048668
+启动kernel: blocks=2061, threads_per_block=1024
+总线程数: 2110464, guess数量: 2110010
+启动kernel: blocks=2018, threads_per_block=1024
+总线程数: 2066432, guess数量: 2065800
+启动kernel: blocks=2018, threads_per_block=1024
+总线程数: 2066432, guess数量: 2065452
+启动kernel: blocks=1968, threads_per_block=1024
+总线程数: 2015232, guess数量: 2014408
+启动kernel: blocks=2083, threads_per_block=1024
+总线程数: 2132992, guess数量: 2132652
+启动kernel: blocks=1967, threads_per_block=1024
+总线程数: 2014208, guess数量: 2014024
+启动kernel: blocks=1954, threads_per_block=1024
+总线程数: 2000896, guess数量: 2000210
+启动kernel: blocks=1968, threads_per_block=1024
+总线程数: 2015232, guess数量: 2014513
+启动kernel: blocks=1969, threads_per_block=1024
+总线程数: 2016256, guess数量: 2015402
+启动kernel: blocks=1976, threads_per_block=1024
+总线程数: 2023424, guess数量: 2022963
+启动kernel: blocks=1995, threads_per_block=1024
+总线程数: 2042880, guess数量: 2042222
+启动kernel: blocks=1954, threads_per_block=1024
+总线程数: 2000896, guess数量: 2000466
+启动kernel: blocks=1993, threads_per_block=1024
+总线程数: 2040832, guess数量: 2040158
+启动kernel: blocks=2001, threads_per_block=1024
+总线程数: 2049024, guess数量: 2048251
+启动kernel: blocks=1968, threads_per_block=1024
+总线程数: 2015232, guess数量: 2014584
+启动kernel: blocks=1963, threads_per_block=1024
+总线程数: 2010112, guess数量: 2009773
+启动kernel: blocks=1978, threads_per_block=1024
+总线程数: 2025472, guess数量: 2025347
+启动kernel: blocks=1976, threads_per_block=1024
+总线程数: 2023424, guess数量: 2022401
+启动kernel: blocks=1961, threads_per_block=1024
+总线程数: 2008064, guess数量: 2007301
+启动kernel: blocks=1990, threads_per_block=1024
+总线程数: 2037760, guess数量: 2037069
+启动kernel: blocks=1960, threads_per_block=1024
+总线程数: 2007040, guess数量: 2006232
+启动kernel: blocks=2103, threads_per_block=1024
+总线程数: 2153472, guess数量: 2152948
+启动kernel: blocks=1959, threads_per_block=1024
+总线程数: 2006016, guess数量: 2005919
+启动kernel: blocks=1954, threads_per_block=1024
+总线程数: 2000896, guess数量: 2000252
+启动kernel: blocks=1979, threads_per_block=1024
+总线程数: 2026496, guess数量: 2025782
+启动kernel: blocks=1979, threads_per_block=1024
+总线程数: 2026496, guess数量: 2026271
+启动kernel: blocks=1988, threads_per_block=1024
+总线程数: 2035712, guess数量: 2035244
+启动kernel: blocks=1979, threads_per_block=1024
+总线程数: 2026496, guess数量: 2025834
+启动kernel: blocks=2096, threads_per_block=1024
+总线程数: 2146304, guess数量: 2145741
+启动kernel: blocks=1961, threads_per_block=1024
+总线程数: 2008064, guess数量: 2008022
+启动kernel: blocks=1955, threads_per_block=1024
+总线程数: 2001920, guess数量: 2001610
+启动kernel: blocks=2017, threads_per_block=1024
+总线程数: 2065408, guess数量: 2065061
+启动kernel: blocks=2048, threads_per_block=1024
+总线程数: 2097152, guess数量: 2096764
+启动kernel: blocks=1959, threads_per_block=1024
+总线程数: 2006016, guess数量: 2005055
+启动kernel: blocks=1978, threads_per_block=1024
+总线程数: 2025472, guess数量: 2024867
+启动kernel: blocks=1972, threads_per_block=1024
+总线程数: 2019328, guess数量: 2018422
+启动kernel: blocks=1956, threads_per_block=1024
+总线程数: 2002944, guess数量: 2002280
+启动kernel: blocks=2003, threads_per_block=1024
+总线程数: 2051072, guess数量: 2050747
+启动kernel: blocks=1960, threads_per_block=1024
+总线程数: 2007040, guess数量: 2006898
+启动kernel: blocks=1959, threads_per_block=1024
+总线程数: 2006016, guess数量: 2005192
+启动kernel: blocks=1961, threads_per_block=1024
+总线程数: 2008064, guess数量: 2007295
+启动kernel: blocks=1969, threads_per_block=1024
+总线程数: 2016256, guess数量: 2016064
+启动kernel: blocks=1973, threads_per_block=1024
+总线程数: 2020352, guess数量: 2019765
+启动kernel: blocks=1975, threads_per_block=1024
+总线程数: 2022400, guess数量: 2021487
+启动kernel: blocks=1980, threads_per_block=1024
+总线程数: 2027520, guess数量: 2026652
+启动kernel: blocks=1957, threads_per_block=1024
+总线程数: 2003968, guess数量: 2003202
+启动kernel: blocks=1981, threads_per_block=1024
+总线程数: 2028544, guess数量: 2027894
+启动kernel: blocks=1987, threads_per_block=1024
+总线程数: 2034688, guess数量: 2034418
+启动kernel: blocks=1965, threads_per_block=1024
+总线程数: 2012160, guess数量: 2011196
+启动kernel: blocks=1980, threads_per_block=1024
+总线程数: 2027520, guess数量: 2027479
+启动kernel: blocks=2008, threads_per_block=1024
+总线程数: 2056192, guess数量: 2055631
+启动kernel: blocks=1963, threads_per_block=1024
+总线程数: 2010112, guess数量: 2009579
+启动kernel: blocks=1981, threads_per_block=1024
+总线程数: 2028544, guess数量: 2028215
+启动kernel: blocks=2100, threads_per_block=1024
+总线程数: 2150400, guess数量: 2149878
+启动kernel: blocks=2059, threads_per_block=1024
+总线程数: 2108416, guess数量: 2108133
+启动kernel: blocks=1990, threads_per_block=1024
+总线程数: 2037760, guess数量: 2037462
+启动kernel: blocks=1969, threads_per_block=1024
+总线程数: 2016256, guess数量: 2015907
+启动kernel: blocks=1966, threads_per_block=1024
+总线程数: 2013184, guess数量: 2012429
+启动kernel: blocks=1966, threads_per_block=1024
+总线程数: 2013184, guess数量: 2012575
+启动kernel: blocks=2029, threads_per_block=1024
+总线程数: 2077696, guess数量: 2077493
+启动kernel: blocks=2088, threads_per_block=1024
+总线程数: 2138112, guess数量: 2137604
+启动kernel: blocks=1990, threads_per_block=1024
+总线程数: 2037760, guess数量: 2037278
+启动kernel: blocks=1990, threads_per_block=1024
+总线程数: 2037760, guess数量: 2036794
+启动kernel: blocks=1974, threads_per_block=1024
+总线程数: 2021376, guess数量: 2021065
+启动kernel: blocks=2104, threads_per_block=1024
+总线程数: 2154496, guess数量: 2153539
+启动kernel: blocks=1988, threads_per_block=1024
+总线程数: 2035712, guess数量: 2035464
+启动kernel: blocks=1958, threads_per_block=1024
+总线程数: 2004992, guess数量: 2004041
+启动kernel: blocks=1984, threads_per_block=1024
+总线程数: 2031616, guess数量: 2031544
+启动kernel: blocks=2003, threads_per_block=1024
+总线程数: 2051072, guess数量: 2050698
+启动kernel: blocks=1968, threads_per_block=1024
+总线程数: 2015232, guess数量: 2014351
+启动kernel: blocks=1982, threads_per_block=1024
+总线程数: 2029568, guess数量: 2029026
+启动kernel: blocks=2059, threads_per_block=1024
+总线程数: 2108416, guess数量: 2107613
+启动kernel: blocks=2066, threads_per_block=1024
+总线程数: 2115584, guess数量: 2115408
+启动kernel: blocks=1970, threads_per_block=1024
+总线程数: 2017280, guess数量: 2016644
+启动kernel: blocks=1954, threads_per_block=1024
+总线程数: 2000896, guess数量: 2000392
+启动kernel: blocks=2073, threads_per_block=1024
+总线程数: 2122752, guess数量: 2122144
+启动kernel: blocks=1981, threads_per_block=1024
+总线程数: 2028544, guess数量: 2028195
+启动kernel: blocks=1981, threads_per_block=1024
+总线程数: 2028544, guess数量: 2028208
+
+--- 实验结果 ---
+猜测上限: 250000000, 批处理大小: 10000000
+Guesses generated: 251422335
+Guess time: 8.59541 seconds
+Hash time: 55.6634 seconds
+Train time: 12.5843 seconds
+Total time: 64.2588 seconds
+-------------------
+
+==========================================
+实验 #5: 数据集/小批次
+猜测上限: 300000000, 批处理大小: 10000000， GPU批处理大小：2000000
+==========================================
+启动kernel: blocks=2050, threads_per_block=1024
+总线程数: 2099200, guess数量: 2099050
+启动kernel: blocks=1954, threads_per_block=1024
+总线程数: 2000896, guess数量: 2000849
+启动kernel: blocks=2013, threads_per_block=1024
+总线程数: 2061312, guess数量: 2060301
+启动kernel: blocks=1973, threads_per_block=1024
+总线程数: 2020352, guess数量: 2020313
+启动kernel: blocks=2017, threads_per_block=1024
+总线程数: 2065408, guess数量: 2064778
+启动kernel: blocks=2042, threads_per_block=1024
+总线程数: 2091008, guess数量: 2090829
+启动kernel: blocks=1963, threads_per_block=1024
+总线程数: 2010112, guess数量: 2009358
+启动kernel: blocks=1973, threads_per_block=1024
+总线程数: 2020352, guess数量: 2019966
+启动kernel: blocks=1964, threads_per_block=1024
+总线程数: 2011136, guess数量: 2010760
+启动kernel: blocks=2025, threads_per_block=1024
+总线程数: 2073600, guess数量: 2072827
+启动kernel: blocks=2026, threads_per_block=1024
+总线程数: 2074624, guess数量: 2074016
+启动kernel: blocks=1955, threads_per_block=1024
+总线程数: 2001920, guess数量: 2001409
+启动kernel: blocks=2003, threads_per_block=1024
+总线程数: 2051072, guess数量: 2050396
+启动kernel: blocks=2033, threads_per_block=1024
+总线程数: 2081792, guess数量: 2081584
+启动kernel: blocks=1996, threads_per_block=1024
+总线程数: 2043904, guess数量: 2043395
+启动kernel: blocks=1961, threads_per_block=1024
+总线程数: 2008064, guess数量: 2007166
+启动kernel: blocks=1958, threads_per_block=1024
+总线程数: 2004992, guess数量: 2004679
+启动kernel: blocks=2008, threads_per_block=1024
+总线程数: 2056192, guess数量: 2055191
+启动kernel: blocks=2002, threads_per_block=1024
+总线程数: 2050048, guess数量: 2049904
+启动kernel: blocks=1989, threads_per_block=1024
+总线程数: 2036736, guess数量: 2036195
+启动kernel: blocks=1977, threads_per_block=1024
+总线程数: 2024448, guess数量: 2023583
+启动kernel: blocks=1981, threads_per_block=1024
+总线程数: 2028544, guess数量: 2028227
+启动kernel: blocks=1963, threads_per_block=1024
+总线程数: 2010112, guess数量: 2009461
+启动kernel: blocks=1990, threads_per_block=1024
+总线程数: 2037760, guess数量: 2037743
+启动kernel: blocks=1966, threads_per_block=1024
+总线程数: 2013184, guess数量: 2012373
+启动kernel: blocks=1997, threads_per_block=1024
+总线程数: 2044928, guess数量: 2044506
+启动kernel: blocks=2091, threads_per_block=1024
+总线程数: 2141184, guess数量: 2140873
+启动kernel: blocks=2078, threads_per_block=1024
+总线程数: 2127872, guess数量: 2127829
+启动kernel: blocks=2025, threads_per_block=1024
+总线程数: 2073600, guess数量: 2073274
+启动kernel: blocks=2014, threads_per_block=1024
+总线程数: 2062336, guess数量: 2061856
+启动kernel: blocks=1988, threads_per_block=1024
+总线程数: 2035712, guess数量: 2035129
+启动kernel: blocks=2060, threads_per_block=1024
+总线程数: 2109440, guess数量: 2108476
+启动kernel: blocks=2003, threads_per_block=1024
+总线程数: 2051072, guess数量: 2050468
+启动kernel: blocks=1959, threads_per_block=1024
+总线程数: 2006016, guess数量: 2005922
+启动kernel: blocks=2028, threads_per_block=1024
+总线程数: 2076672, guess数量: 2075939
+启动kernel: blocks=2081, threads_per_block=1024
+总线程数: 2130944, guess数量: 2130826
+启动kernel: blocks=1954, threads_per_block=1024
+总线程数: 2000896, guess数量: 2000607
+启动kernel: blocks=1963, threads_per_block=1024
+总线程数: 2010112, guess数量: 2009898
+启动kernel: blocks=2082, threads_per_block=1024
+总线程数: 2131968, guess数量: 2131230
+启动kernel: blocks=1979, threads_per_block=1024
+总线程数: 2026496, guess数量: 2025924
+启动kernel: blocks=2047, threads_per_block=1024
+总线程数: 2096128, guess数量: 2095972
+启动kernel: blocks=2091, threads_per_block=1024
+总线程数: 2141184, guess数量: 2140386
+启动kernel: blocks=1993, threads_per_block=1024
+总线程数: 2040832, guess数量: 2040019
+启动kernel: blocks=1978, threads_per_block=1024
+总线程数: 2025472, guess数量: 2025271
+启动kernel: blocks=2001, threads_per_block=1024
+总线程数: 2049024, guess数量: 2048668
+启动kernel: blocks=2061, threads_per_block=1024
+总线程数: 2110464, guess数量: 2110010
+启动kernel: blocks=2018, threads_per_block=1024
+总线程数: 2066432, guess数量: 2065800
+启动kernel: blocks=2018, threads_per_block=1024
+总线程数: 2066432, guess数量: 2065452
+启动kernel: blocks=1968, threads_per_block=1024
+总线程数: 2015232, guess数量: 2014408
+启动kernel: blocks=2083, threads_per_block=1024
+总线程数: 2132992, guess数量: 2132652
+启动kernel: blocks=1967, threads_per_block=1024
+总线程数: 2014208, guess数量: 2014024
+启动kernel: blocks=1954, threads_per_block=1024
+总线程数: 2000896, guess数量: 2000210
+启动kernel: blocks=1968, threads_per_block=1024
+总线程数: 2015232, guess数量: 2014513
+启动kernel: blocks=1969, threads_per_block=1024
+总线程数: 2016256, guess数量: 2015402
+启动kernel: blocks=1976, threads_per_block=1024
+总线程数: 2023424, guess数量: 2022963
+启动kernel: blocks=1995, threads_per_block=1024
+总线程数: 2042880, guess数量: 2042222
+启动kernel: blocks=1954, threads_per_block=1024
+总线程数: 2000896, guess数量: 2000466
+启动kernel: blocks=1993, threads_per_block=1024
+总线程数: 2040832, guess数量: 2040158
+启动kernel: blocks=2001, threads_per_block=1024
+总线程数: 2049024, guess数量: 2048251
+启动kernel: blocks=1968, threads_per_block=1024
+总线程数: 2015232, guess数量: 2014584
+启动kernel: blocks=1963, threads_per_block=1024
+总线程数: 2010112, guess数量: 2009773
+启动kernel: blocks=1978, threads_per_block=1024
+总线程数: 2025472, guess数量: 2025347
+启动kernel: blocks=1976, threads_per_block=1024
+总线程数: 2023424, guess数量: 2022401
+启动kernel: blocks=1961, threads_per_block=1024
+总线程数: 2008064, guess数量: 2007301
+启动kernel: blocks=1990, threads_per_block=1024
+总线程数: 2037760, guess数量: 2037069
+启动kernel: blocks=1960, threads_per_block=1024
+总线程数: 2007040, guess数量: 2006232
+启动kernel: blocks=2103, threads_per_block=1024
+总线程数: 2153472, guess数量: 2152948
+启动kernel: blocks=1959, threads_per_block=1024
+总线程数: 2006016, guess数量: 2005919
+启动kernel: blocks=1954, threads_per_block=1024
+总线程数: 2000896, guess数量: 2000252
+启动kernel: blocks=1979, threads_per_block=1024
+总线程数: 2026496, guess数量: 2025782
+启动kernel: blocks=1979, threads_per_block=1024
+总线程数: 2026496, guess数量: 2026271
+启动kernel: blocks=1988, threads_per_block=1024
+总线程数: 2035712, guess数量: 2035244
+启动kernel: blocks=1979, threads_per_block=1024
+总线程数: 2026496, guess数量: 2025834
+启动kernel: blocks=2096, threads_per_block=1024
+总线程数: 2146304, guess数量: 2145741
+启动kernel: blocks=1961, threads_per_block=1024
+总线程数: 2008064, guess数量: 2008022
+启动kernel: blocks=1955, threads_per_block=1024
+总线程数: 2001920, guess数量: 2001610
+启动kernel: blocks=2017, threads_per_block=1024
+总线程数: 2065408, guess数量: 2065061
+启动kernel: blocks=2048, threads_per_block=1024
+总线程数: 2097152, guess数量: 2096764
+启动kernel: blocks=1959, threads_per_block=1024
+总线程数: 2006016, guess数量: 2005055
+启动kernel: blocks=1978, threads_per_block=1024
+总线程数: 2025472, guess数量: 2024867
+启动kernel: blocks=1972, threads_per_block=1024
+总线程数: 2019328, guess数量: 2018422
+启动kernel: blocks=1956, threads_per_block=1024
+总线程数: 2002944, guess数量: 2002280
+启动kernel: blocks=2003, threads_per_block=1024
+总线程数: 2051072, guess数量: 2050747
+启动kernel: blocks=1960, threads_per_block=1024
+总线程数: 2007040, guess数量: 2006898
+启动kernel: blocks=1959, threads_per_block=1024
+总线程数: 2006016, guess数量: 2005192
+启动kernel: blocks=1961, threads_per_block=1024
+总线程数: 2008064, guess数量: 2007295
+启动kernel: blocks=1969, threads_per_block=1024
+总线程数: 2016256, guess数量: 2016064
+启动kernel: blocks=1973, threads_per_block=1024
+总线程数: 2020352, guess数量: 2019765
+启动kernel: blocks=1975, threads_per_block=1024
+总线程数: 2022400, guess数量: 2021487
+启动kernel: blocks=1980, threads_per_block=1024
+总线程数: 2027520, guess数量: 2026652
+启动kernel: blocks=1957, threads_per_block=1024
+总线程数: 2003968, guess数量: 2003202
+启动kernel: blocks=1981, threads_per_block=1024
+总线程数: 2028544, guess数量: 2027894
+启动kernel: blocks=1987, threads_per_block=1024
+总线程数: 2034688, guess数量: 2034418
+启动kernel: blocks=1965, threads_per_block=1024
+总线程数: 2012160, guess数量: 2011196
+启动kernel: blocks=1980, threads_per_block=1024
+总线程数: 2027520, guess数量: 2027479
+启动kernel: blocks=2008, threads_per_block=1024
+总线程数: 2056192, guess数量: 2055631
+启动kernel: blocks=1963, threads_per_block=1024
+总线程数: 2010112, guess数量: 2009579
+启动kernel: blocks=1981, threads_per_block=1024
+总线程数: 2028544, guess数量: 2028215
+启动kernel: blocks=2100, threads_per_block=1024
+总线程数: 2150400, guess数量: 2149878
+启动kernel: blocks=2059, threads_per_block=1024
+总线程数: 2108416, guess数量: 2108133
+启动kernel: blocks=1990, threads_per_block=1024
+总线程数: 2037760, guess数量: 2037462
+启动kernel: blocks=1969, threads_per_block=1024
+总线程数: 2016256, guess数量: 2015907
+启动kernel: blocks=1966, threads_per_block=1024
+总线程数: 2013184, guess数量: 2012429
+启动kernel: blocks=1966, threads_per_block=1024
+总线程数: 2013184, guess数量: 2012575
+启动kernel: blocks=2029, threads_per_block=1024
+总线程数: 2077696, guess数量: 2077493
+启动kernel: blocks=2088, threads_per_block=1024
+总线程数: 2138112, guess数量: 2137604
+启动kernel: blocks=1990, threads_per_block=1024
+总线程数: 2037760, guess数量: 2037278
+启动kernel: blocks=1990, threads_per_block=1024
+总线程数: 2037760, guess数量: 2036794
+启动kernel: blocks=1974, threads_per_block=1024
+总线程数: 2021376, guess数量: 2021065
+启动kernel: blocks=2104, threads_per_block=1024
+总线程数: 2154496, guess数量: 2153539
+启动kernel: blocks=1988, threads_per_block=1024
+总线程数: 2035712, guess数量: 2035464
+启动kernel: blocks=1958, threads_per_block=1024
+总线程数: 2004992, guess数量: 2004041
+启动kernel: blocks=1984, threads_per_block=1024
+总线程数: 2031616, guess数量: 2031544
+启动kernel: blocks=2003, threads_per_block=1024
+总线程数: 2051072, guess数量: 2050698
+启动kernel: blocks=1968, threads_per_block=1024
+总线程数: 2015232, guess数量: 2014351
+启动kernel: blocks=1982, threads_per_block=1024
+总线程数: 2029568, guess数量: 2029026
+启动kernel: blocks=2059, threads_per_block=1024
+总线程数: 2108416, guess数量: 2107613
+启动kernel: blocks=2066, threads_per_block=1024
+总线程数: 2115584, guess数量: 2115408
+启动kernel: blocks=1970, threads_per_block=1024
+总线程数: 2017280, guess数量: 2016644
+启动kernel: blocks=1954, threads_per_block=1024
+总线程数: 2000896, guess数量: 2000392
+启动kernel: blocks=2073, threads_per_block=1024
+总线程数: 2122752, guess数量: 2122144
+启动kernel: blocks=1981, threads_per_block=1024
+总线程数: 2028544, guess数量: 2028195
+启动kernel: blocks=1981, threads_per_block=1024
+总线程数: 2028544, guess数量: 2028208
+启动kernel: blocks=1958, threads_per_block=1024
+总线程数: 2004992, guess数量: 2004789
+启动kernel: blocks=2105, threads_per_block=1024
+总线程数: 2155520, guess数量: 2155314
+启动kernel: blocks=1963, threads_per_block=1024
+总线程数: 2010112, guess数量: 2009819
+启动kernel: blocks=2069, threads_per_block=1024
+总线程数: 2118656, guess数量: 2117681
+启动kernel: blocks=1975, threads_per_block=1024
+总线程数: 2022400, guess数量: 2021590
+启动kernel: blocks=1966, threads_per_block=1024
+总线程数: 2013184, guess数量: 2012183
+启动kernel: blocks=1989, threads_per_block=1024
+总线程数: 2036736, guess数量: 2036138
+启动kernel: blocks=2018, threads_per_block=1024
+总线程数: 2066432, guess数量: 2065442
+启动kernel: blocks=1962, threads_per_block=1024
+总线程数: 2009088, guess数量: 2008559
+启动kernel: blocks=2099, threads_per_block=1024
+总线程数: 2149376, guess数量: 2148924
+启动kernel: blocks=1954, threads_per_block=1024
+总线程数: 2000896, guess数量: 2000634
+启动kernel: blocks=1968, threads_per_block=1024
+总线程数: 2015232, guess数量: 2015014
+启动kernel: blocks=2039, threads_per_block=1024
+总线程数: 2087936, guess数量: 2087364
+启动kernel: blocks=1980, threads_per_block=1024
+总线程数: 2027520, guess数量: 2026871
+启动kernel: blocks=1968, threads_per_block=1024
+总线程数: 2015232, guess数量: 2014637
+启动kernel: blocks=1978, threads_per_block=1024
+总线程数: 2025472, guess数量: 2024666
+启动kernel: blocks=1958, threads_per_block=1024
+总线程数: 2004992, guess数量: 2004302
+启动kernel: blocks=1959, threads_per_block=1024
+总线程数: 2006016, guess数量: 2005360
+启动kernel: blocks=1985, threads_per_block=1024
+总线程数: 2032640, guess数量: 2032338
+启动kernel: blocks=1994, threads_per_block=1024
+总线程数: 2041856, guess数量: 2041721
+启动kernel: blocks=1968, threads_per_block=1024
+总线程数: 2015232, guess数量: 2014216
+启动kernel: blocks=1970, threads_per_block=1024
+总线程数: 2017280, guess数量: 2016474
+启动kernel: blocks=1979, threads_per_block=1024
+总线程数: 2026496, guess数量: 2026383
+启动kernel: blocks=1979, threads_per_block=1024
+总线程数: 2026496, guess数量: 2025534
+
+--- 实验结果 ---
+猜测上限: 300000000, 批处理大小: 10000000
+Guesses generated: 300338288
+Guess time: 10.6233 seconds
+Hash time: 67.2446 seconds
+Train time: 12.5843 seconds
+Total time: 77.8679 seconds
+-------------------
+
+--- 实验批次结束 ---
+

@@ -1,6 +1,12 @@
 #include "PCFG.h"
 #include "guessing_cuda.h"
+#include <chrono>
 using namespace std;
+using namespace chrono;
+
+// #ifdef TIME_COUNT
+double time_gpu_kernel = 0;
+// #endif
 
 void PriorityQueue::CalProb(PT &pt)
 {
@@ -226,11 +232,22 @@ void PriorityQueue::Generate(PT pt)
         //TODO 转变成添加任务的逻辑，并且任务数达到10_0000则launch, prefix是 ""
         //BUG ?? 姑且认为 pt.max_indices[0] 其实就是a,只不过一个是pt里的副本，一个是model那里的。
         // 因为存了好几遍所以显得乱。
-        
+
+// #ifdef TIME_COUNT
+auto start_gpu_kernel = system_clock::now();
+// #endif
+
         task_manager->add_task(a, "", *this);
         if(task_manager->guesscount > GPU_BATCH_SIZE){
             task_manager->launch_gpu_kernel(guesses, *this);
         }
+
+// #ifdef TIME_COUNT
+auto end_gpu_kernel = system_clock::now();
+auto duration_gpu_kernel = duration_cast<microseconds>(end_gpu_kernel - start_gpu_kernel);
+time_gpu_kernel += double(duration_gpu_kernel.count()) * microseconds::period::num / microseconds::period::den;
+// #endif 
+
     }
     else
     {
@@ -290,11 +307,21 @@ void PriorityQueue::Generate(PT pt)
         //TODO 转变成添加任务的逻辑，并且任务数达到10_0000则launch, 有prefix
         //BUG ?? 姑且认为 pt.max_indices[pt.content.size()-1] 其实就是a,只不过一个是pt里的副本，一个是model那里的。
         // 因为存了好几遍所以显得乱。
+
+// #ifdef TIME_COUNT
+auto start_gpu_kernel = system_clock::now();
+// #endif
+
         task_manager->add_task(a, guess, *this);
         if(task_manager->guesscount > GPU_BATCH_SIZE){
             task_manager->launch_gpu_kernel(guesses, *this);
         }
 
+// #ifdef TIME_COUNT
+auto end_gpu_kernel = system_clock::now();
+auto duration_gpu_kernel = duration_cast<microseconds>(end_gpu_kernel - start_gpu_kernel);
+time_gpu_kernel += double(duration_gpu_kernel.count()) * microseconds::period::num / microseconds::period::den;
+// #endif 
 
     }
 }

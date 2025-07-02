@@ -161,5 +161,5 @@ public:
     void PopNext();
         
     int total_guesses = 0;
-    vector<string> guesses;
+    vector<string_view> guesses;
 };

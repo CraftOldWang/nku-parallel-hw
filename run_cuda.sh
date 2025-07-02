@@ -5,49 +5,77 @@
 mkdir -p ./cur_result
 mkdir -p build
 
-for bsize in 10000; do
-    echo "🔧 编译 普通的-O2"
+# for bsize in 10000; do
+#     echo "🔧 编译 普通的-O2"
 
-    g++ main.cpp guessing_ori.cpp train.cpp md5.cpp \
-        -o build/normal \
-        -std=c++14 \
-        -O2 \
+#     g++ main.cpp guessing_ori.cpp train.cpp md5.cpp \
+#         -o build/normal \
+#         -std=c++14 \
+#         -O2 \
 
-    if [ $? -ne 0 ]; then
-        echo "❌ 编译失败，跳过 普通的-O2"
-        continue
-    fi
+#     if [ $? -ne 0 ]; then
+#         echo "❌ 编译失败，跳过 普通的-O2"
+#         continue
+#     fi
 
-    echo "🚀 运行 GPU_BATCH_SIZE=$bsize"
-    ./build/normal > ./cur_result/normal_output.txt
-    echo "✅ 输出保存到 normal_output.txt"
-done
+#     echo "🚀 运行 GPU_BATCH_SIZE=$bsize"
+#     ./build/normal > ./cur_result/normal_output_testlong.txt
+#     echo "✅ 输出保存到 normal_output_testlong.txt"
+# done
 
 
 
 # #TODO 试试 1 10 100 1000 10000 100000 1000000 10000000
 # 遍历三个不同的 batch size
-# for bsize in 1 10 100 1000 10000 100000 1000000 10000000; do
-#     echo "🔧 编译 cuda GPU_BATCH_SIZE=$bsize"
+# 用那个 string_view 的话就一次需要产出 >=100000个 guess
+for bsize in  100000 1000000 5000000 10000000 ; do
+    echo "🔧 编译 cuda GPU_BATCH_SIZE=$bsize"
+
+    nvcc main_cuda_ori.cpp guessing_cuda.cu guessing.cpp train.cpp md5.cpp \
+        -o build/guess_bs${bsize} \
+        -std=c++17 \
+        -O2 \
+        -arch=sm_75 \
+        -lcudart \
+        -DNDEBUG \
+        -DGUESS_PER_THREAD=1 \
+        -DGPU_BATCH_SIZE=${bsize} \
+        --use_fast_math \
+
+    if [ $? -ne 0 ]; then
+        echo "❌ 编译失败，跳过 batch size = $bsize"
+        continue
+    fi
+
+    echo "🚀 运行 GPU_BATCH_SIZE=$bsize ， reserve 并 emplace_back"
+    ./build/guess_bs${bsize} > ./cur_result/result_${bsize}last_ver.txt
+    echo "✅ 输出保存到 result_${bsize}last_ver.txt"
+done
+
+
+# 遍历 guess_per_thread GUESS_PER_THREAD 
+# for gsize in 1 2 4 8 16 32; do
+#     echo "🔧 编译 cuda GPU_BATCH_SIZE=100_0000 GUESS_PER_THREAD=$gsize"
 
 #     nvcc main_cuda_ori.cpp guessing_cuda.cu guessing.cpp train.cpp md5.cpp \
-#         -o build/guess_bs${bsize} \
+#         -o build/guess_gs${gsize} \
 #         -std=c++14 \
 #         -O2 \
 #         -arch=sm_75 \
 #         -lcudart \
 #         -DNDEBUG \
-#         -DGPU_BATCH_SIZE=${bsize} \
+#         -DGUESS_PER_THREAD=${gsize} \
+#         -DGPU_BATCH_SIZE=1000000 \
 #         --use_fast_math \
 
 #     if [ $? -ne 0 ]; then
-#         echo "❌ 编译失败，跳过 batch size = $bsize"
+#         echo "❌ 编译失败，跳过 guess size = $gsize"
 #         continue
 #     fi
 
-#     echo "🚀 运行 GPU_BATCH_SIZE=$bsize"
-#     ./build/guess_bs${bsize} > ./cur_result/result_${bsize}.txt
-#     echo "✅ 输出保存到 result_${bsize}.txt"
+#     echo "🚀 运行 GUESS_PER_THREAD=$gsize GPU_BATCH_SIZE=100_0000"
+#     ./build/guess_gs${gsize} > ./cur_result/result_${gsize}guess_size.txt
+#     echo "✅ 输出保存到 result_${gsize}guess_size.txt"
 # done
 
 # # 遍历三个不同的 batch size
@@ -107,26 +135,26 @@ done
 
 
 # 单纯avx
-for bsize in 1000000; do
-    echo "🔧 编译 only avx GPU_BATCH_SIZE=$bsize"
+# for bsize in 1000000; do
+#     echo "🔧 编译 only avx GPU_BATCH_SIZE=$bsize"
 
 
-    g++ main_avx.cpp guessing_ori.cpp train.cpp md5.cpp md5_avx.cpp \
-        -o build/avx_test_only \
-        -std=c++14 \
-        -O2 \
-        -DUSING_SIMD \
-        -mavx -mavx2 -mfma
+#     g++ main_avx.cpp guessing_ori.cpp train.cpp md5.cpp md5_avx.cpp \
+#         -o build/avx_test_only \
+#         -std=c++14 \
+#         -O2 \
+#         -DUSING_SIMD \
+#         -mavx -mavx2 -mfma
 
-    if [ $? -ne 0 ]; then
-        echo "❌ 编译失败，跳过 batch size = $bsize"
-        continue
-    fi
+#     if [ $? -ne 0 ]; then
+#         echo "❌ 编译失败，跳过 batch size = $bsize"
+#         continue
+#     fi
 
-    echo "🚀 运行 GPU_BATCH_SIZE=$bsize"
-    ./build/avx_test_only > ./cur_result/avx_result_only.txt
-    echo "✅ 输出保存到 avx_result_only.txt"
-done
+#     echo "🚀 运行 GPU_BATCH_SIZE=$bsize"
+#     ./build/avx_test_only > ./cur_result/avx_result_only.txt
+#     echo "✅ 输出保存到 avx_result_only.txt"
+# done
 
 # # 测一下正确性
 # for bsize in 1000000; do

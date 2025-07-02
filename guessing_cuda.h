@@ -32,6 +32,7 @@ struct Taskcontent{
     int* prefix_offsets;
     int* prefix_lens; // 每个prefix的长度
     int* seg_value_counts; // 每个segment的value数量
+    int* cumulative_guess_offsets; // 累积guess偏移数组，用于二分查找优化
 
     int* output_offsets;  // 每个task在输出buffer中的起始位置
 
@@ -53,7 +54,7 @@ public:
 
     TaskManager(): taskcount(0), guesscount(0){}// vector 自己会调自己的构造..
     void add_task(segment* seg, string prefix, PriorityQueue& q);
-    void launch_gpu_kernel(vector<string>& guesses, PriorityQueue& q);
+    void launch_gpu_kernel(vector<string_view>& guesses, PriorityQueue& q);
     void clean();
     void print();
     void init_length_maps(PriorityQueue& q);

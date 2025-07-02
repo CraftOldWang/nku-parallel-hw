@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 #include <cstring>
+#include <string_view>
 
 using namespace std;
 
@@ -80,4 +81,4 @@ typedef unsigned int bit32;
   (a) += (b); \
 }
 
-void MD5Hash(string input, bit32 *state);
+void MD5Hash(string_view input, bit32 *state);

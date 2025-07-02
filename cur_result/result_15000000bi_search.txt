@@ -1,0 +1,194 @@
+
+--- 标准 MD5 CUDA 实验批次 [Wed Jul  2 18:47:46 2025
+] ---
+Training...
+Training phase 1: reading and parsing passwords...
+Training phase 2: Ordering segment values and PTs...
+total pts18966
+Ordering letters
+Ordering digits
+ordering symbols
+模型训练完成，耗时: 13.0173 秒
+
+==========================================
+实验 #1: 数据集/小批次
+猜测上限: 10000000, 批处理大小: 1000000， GPU批处理大小：15000000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 10000000, 批处理大小: 1000000
+Guesses generated: 15033107
+Guess time: 1.16582 seconds
+Hash time: 0 seconds
+Train time: 13.0173 seconds
+Total time: 1.16582 seconds
+time all addtask:0
+
+time launch all task:0
+
+time gpu_kernel :0.933333
+
+-------------------
+
+==========================================
+实验 #2: 数据集/小批次
+猜测上限: 15000000, 批处理大小: 1000000， GPU批处理大小：15000000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 15000000, 批处理大小: 1000000
+Guesses generated: 15033107
+Guess time: 0.548529 seconds
+Hash time: 0 seconds
+Train time: 13.0173 seconds
+Total time: 0.548529 seconds
+time all addtask:0
+
+time launch all task:0
+
+time gpu_kernel :1.24968
+
+-------------------
+
+==========================================
+实验 #3: 数据集/小批次
+猜测上限: 20000000, 批处理大小: 1000000， GPU批处理大小：15000000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 20000000, 批处理大小: 1000000
+Guesses generated: 30103968
+Guess time: 1.1137 seconds
+Hash time: 3.48545 seconds
+Train time: 13.0173 seconds
+Total time: 4.59915 seconds
+time all addtask:0
+
+time launch all task:0
+
+time gpu_kernel :1.8909
+
+-------------------
+
+==========================================
+实验 #4: 数据集/小批次
+猜测上限: 25000000, 批处理大小: 1000000， GPU批处理大小：15000000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 25000000, 批处理大小: 1000000
+Guesses generated: 30103968
+Guess time: 1.10893 seconds
+Hash time: 3.48092 seconds
+Train time: 13.0173 seconds
+Total time: 4.58985 seconds
+time all addtask:0
+
+time launch all task:0
+
+time gpu_kernel :2.52939
+
+-------------------
+
+==========================================
+实验 #5: 数据集/小批次
+猜测上限: 30000000, 批处理大小: 1000000， GPU批处理大小：15000000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 30000000, 批处理大小: 1000000
+Guesses generated: 30103968
+Guess time: 1.15253 seconds
+Hash time: 3.46188 seconds
+Train time: 13.0173 seconds
+Total time: 4.61441 seconds
+time all addtask:0
+
+time launch all task:0
+
+time gpu_kernel :3.20419
+
+-------------------
+
+==========================================
+实验 #6: 数据集/小批次
+猜测上限: 35000000, 批处理大小: 1000000， GPU批处理大小：15000000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 35000000, 批处理大小: 1000000
+Guesses generated: 45109329
+Guess time: 1.66248 seconds
+Hash time: 6.94378 seconds
+Train time: 13.0173 seconds
+Total time: 8.60625 seconds
+time all addtask:0
+
+time launch all task:0
+
+time gpu_kernel :4.1615
+
+-------------------
+
+==========================================
+实验 #7: 数据集/小批次
+猜测上限: 40000000, 批处理大小: 1000000， GPU批处理大小：15000000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 40000000, 批处理大小: 1000000
+Guesses generated: 45109329
+Guess time: 1.66161 seconds
+Hash time: 6.92384 seconds
+Train time: 13.0173 seconds
+Total time: 8.58545 seconds
+time all addtask:0
+
+time launch all task:0
+
+time gpu_kernel :5.11957
+
+-------------------
+
+==========================================
+实验 #8: 数据集/小批次
+猜测上限: 45000000, 批处理大小: 1000000， GPU批处理大小：15000000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 45000000, 批处理大小: 1000000
+Guesses generated: 45109329
+Guess time: 1.66297 seconds
+Hash time: 6.92333 seconds
+Train time: 13.0173 seconds
+Total time: 8.5863 seconds
+time all addtask:0
+
+time launch all task:0
+
+time gpu_kernel :6.07655
+
+-------------------
+
+==========================================
+实验 #9: 数据集/小批次
+猜测上限: 50000000, 批处理大小: 1000000， GPU批处理大小：15000000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 50000000, 批处理大小: 1000000
+Guesses generated: 60121897
+Guess time: 2.1787 seconds
+Hash time: 10.3821 seconds
+Train time: 13.0173 seconds
+Total time: 12.5608 seconds
+time all addtask:0
+
+time launch all task:0
+
+time gpu_kernel :7.3505
+
+-------------------
+
+--- 实验批次结束 ---
+

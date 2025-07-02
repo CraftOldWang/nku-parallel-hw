@@ -3,6 +3,7 @@
 #include <device_launch_parameters.h>
 #include <vector>
 #include <string>
+#include <string_view>
 #include "guessing_cuda.h"  // 包含头文件
 #include "config.h"
 #include <chrono>
@@ -24,10 +25,48 @@ using namespace chrono;
 
 GpuOrderedValuesData* gpu_data = nullptr;
 TaskManager* task_manager = nullptr;
+char* h_guess_buffer = nullptr; // 为了方便在别的地方释放。。。。在用 string_view
 
 #ifdef TIME_COUNT
 double time_add_task = 0;
+double time_launch_task = 0;
+double time_before_launch = 0;
+double time_after_launch = 0;
+double time_all_batch = 0;
+double time_string_process = 0;
+double time_memcpy_toh = 0;
 #endif
+
+
+// GPU设备函数：使用二分查找找到guess_id对应的task
+__device__ int find_task_for_guess(Taskcontent* d_tasks, int guess_id, int& task_start, int& task_end) {
+    int left = 0, right = d_tasks->taskcount - 1;
+    int found_task_id = -1;
+    
+    while (left <= right) {
+        int mid = (left + right) / 2;
+        
+        // 使用预计算的累积偏移数组
+        int mid_start = d_tasks->cumulative_guess_offsets[mid];
+        int mid_end = d_tasks->cumulative_guess_offsets[mid + 1];
+        
+        if (guess_id >= mid_start && guess_id < mid_end) {
+            // 找到了对应的task
+            found_task_id = mid;
+            task_start = mid_start;
+            task_end = mid_end;
+            break;
+        } else if (guess_id < mid_start) {
+            right = mid - 1;
+        } else {
+            left = mid + 1;
+        }
+    }
+    
+    return found_task_id;
+}
+
+
 
 // guess的数量 > GPU_BATCH_SIZE 个 。 kernal函数
 //TODO 核函数中间逻辑有点。。。。也许还能优化。
@@ -70,46 +109,37 @@ __global__ void generate_guesses_kernel(
         
         // 检查是否需要更新task信息
         if (guess_id < current_task_start || guess_id >= current_task_end) {
-            // 需要查找新的task
-            int guess_offset = 0;
-            for (int i = 0; i < d_tasks->taskcount; i++) {
-                int task_guess_count = d_tasks->seg_value_counts[i];
-                if (guess_id < guess_offset + task_guess_count) {
-                    // 更新缓存
-                    current_task_id = i;
-                    current_task_start = guess_offset;
-                    current_task_end = guess_offset + task_guess_count;
-                    
-                    // 缓存task信息
-                    seg_type = d_tasks->seg_types[i];
-                    seg_id = d_tasks->seg_ids[i];
-                    seg_len = d_tasks->seg_lens[i];
-                    prefix_len = d_tasks->prefix_lens[i];
-                    prefix_offset = d_tasks->prefix_offsets[i];
-                    task_output_offset = d_tasks->output_offsets[i];
-                    
-                    // 选择数据源
-                    if (seg_type == 1) {
-                        all_values = gpu_data->letter_all_values;
-                        value_offsets = gpu_data->letter_value_offsets;
-                        seg_offsets = gpu_data->letter_seg_offsets;
-                    } else if (seg_type == 2) {
-                        all_values = gpu_data->digit_all_values;
-                        value_offsets = gpu_data->digits_value_offsets;
-                        seg_offsets = gpu_data->digit_seg_offsets;
-                    } else {
-                        all_values = gpu_data->symbol_all_values;
-                        value_offsets = gpu_data->symbol_value_offsets;
-                        seg_offsets = gpu_data->symbol_seg_offsets;
-                    }
-                    
-                    seg_start_idx = seg_offsets[seg_id];
-                    break;
+            // 使用设备函数进行二分查找
+            current_task_id = find_task_for_guess(d_tasks, guess_id, current_task_start, current_task_end);
+            
+            if (current_task_id != -1) {
+                // 缓存task信息
+                seg_type = d_tasks->seg_types[current_task_id];
+                seg_id = d_tasks->seg_ids[current_task_id];
+                seg_len = d_tasks->seg_lens[current_task_id];
+                prefix_len = d_tasks->prefix_lens[current_task_id];
+                prefix_offset = d_tasks->prefix_offsets[current_task_id];
+                task_output_offset = d_tasks->output_offsets[current_task_id];
+                
+                // 选择数据源
+                if (seg_type == 1) {
+                    all_values = gpu_data->letter_all_values;
+                    value_offsets = gpu_data->letter_value_offsets;
+                    seg_offsets = gpu_data->letter_seg_offsets;
+                } else if (seg_type == 2) {
+                    all_values = gpu_data->digit_all_values;
+                    value_offsets = gpu_data->digits_value_offsets;
+                    seg_offsets = gpu_data->digit_seg_offsets;
+                } else {
+                    all_values = gpu_data->symbol_all_values;
+                    value_offsets = gpu_data->symbol_value_offsets;
+                    seg_offsets = gpu_data->symbol_seg_offsets;
                 }
-                guess_offset += task_guess_count;
+                
+                seg_start_idx = seg_offsets[seg_id];
             }
         }
-        
+
         // 当前guess在task中的局部索引
         int local_guess_idx = guess_id - current_task_start;
         
@@ -221,7 +251,7 @@ void TaskManager::init_length_maps(PriorityQueue& q) {
 #endif
 }
 
-void TaskManager::launch_gpu_kernel(vector<string>& guesses, PriorityQueue& q){
+void TaskManager::launch_gpu_kernel(vector<string_view>& guesses, PriorityQueue& q){
 #ifdef TIME_COUNT
 auto start_one_batch = system_clock::now();
 
@@ -294,13 +324,16 @@ auto start_before_launch = system_clock::now();
     h_tasks.guesscount = guesscount;
     h_tasks.seg_lens  = seg_lens.data();
     h_tasks.seg_value_counts = seg_value_count.data(); // 每个segment的value数量
-    //得到 gpu_buffer 数组的长度
+    
+    // 合并计算：同时得到 gpu_buffer 数组的长度和累积guess偏移数组
+    vector<int> cumulative_offsets(taskcount + 1, 0);
     for(int i = 0; i < taskcount; i++){
         res_offset.push_back(result_len);
         result_len += seg_value_count[i]*(seg_lens[i] + prefix_lens[i]);
+        cumulative_offsets[i + 1] = cumulative_offsets[i] + seg_value_count[i];
     }
     h_tasks.output_offsets = res_offset.data(); // 这样的话，就没有存最末尾的。只有taskcount个
-
+    h_tasks.cumulative_guess_offsets = cumulative_offsets.data();
 
 
 #ifdef DEBUG
@@ -322,11 +355,16 @@ auto start_before_launch = system_clock::now();
     }
     cout << "验证总长度: " << calculated_total << " (应该等于 " << result_len << ") " 
          << (calculated_total == result_len ? "✓" : "✗") << endl;
+    cout << "\n累积偏移数组:" << endl;
+    for(int i = 0; i <= taskcount; i++){
+        cout << "  cumulative_offsets[" << i << "] = " << cumulative_offsets[i] << endl;
+    }
+
 #endif
 
 
     // 1.999. 分配cpu 部分的内存 （结果 buffer ）
-    char* h_guess_buffer = new char[result_len]; // host端的guess_buffer (结果 buffer)
+    h_guess_buffer = new char[result_len]; // host端的guess_buffer (结果 buffer)
 
 
 #ifdef DEBUG
@@ -381,6 +419,7 @@ auto start_before_launch = system_clock::now();
     CUDA_CHECK(cudaMalloc(&temp.prefix_offsets, (prefixs.size() + 1 ) * sizeof(int))); // +1 for the end offset
     CUDA_CHECK(cudaMalloc(&temp.prefix_lens, prefix_lens.size() * sizeof(int)));
     CUDA_CHECK(cudaMalloc(&temp.seg_value_counts, seg_value_count.size() * sizeof(int)));
+    CUDA_CHECK(cudaMalloc(&temp.cumulative_guess_offsets, (taskcount + 1) * sizeof(int))); // 累积偏移数组
     CUDA_CHECK(cudaMalloc(&temp.output_offsets, (taskcount + 1) * sizeof(int)));
     CUDA_CHECK(cudaMalloc(&d_tasks, sizeof(Taskcontent)));
 
@@ -400,6 +439,7 @@ auto start_before_launch = system_clock::now();
     CUDA_CHECK(cudaMemcpy(temp.prefix_offsets, h_tasks.prefix_offsets, (prefixs.size() + 1 ) * sizeof(int), cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(temp.prefix_lens, h_tasks.prefix_lens, prefixs.size() * sizeof(int), cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(temp.seg_value_counts, h_tasks.seg_value_counts, seg_value_count.size() *sizeof(int), cudaMemcpyHostToDevice)); 
+    CUDA_CHECK(cudaMemcpy(temp.cumulative_guess_offsets, h_tasks.cumulative_guess_offsets, (taskcount + 1) * sizeof(int), cudaMemcpyHostToDevice)); // 复制累积偏移数组
     CUDA_CHECK(cudaMemcpy(temp.output_offsets, h_tasks.output_offsets,  (taskcount + 1) * sizeof(int), cudaMemcpyHostToDevice)); 
 
 
@@ -412,20 +452,21 @@ auto start_before_launch = system_clock::now();
 #ifdef TIME_COUNT
 auto end_before_launch = system_clock::now();
 auto duration_before_launch = duration_cast<microseconds>(end_before_launch - start_before_launch);
-double time_before_launch = double(duration_before_launch.count()) * microseconds::period::num / microseconds::period::den;
+time_before_launch += double(duration_before_launch.count()) * microseconds::period::num / microseconds::period::den;
 
 
-cout << "time before launch one batch :" << time_before_launch << endl;
 
 #endif
     
 
     //4. 启动kernal 开始计算
     //TODO 看一下到底能启用多少thread？ 这里不很清楚该怎么处理
+    int total_threads_needed = (guesscount + GUESS_PER_THREAD - 1) / GUESS_PER_THREAD;
     int threads_per_block = 1024;
-    int blocks = (guesscount + threads_per_block - 1) / threads_per_block;
+    int blocks = (total_threads_needed + threads_per_block - 1) / threads_per_block;
     
-#ifdef DEBUG
+//TODO ，看看每次启用多少线程， 以及尝试二分查找来找 guess对应的task
+#ifdef DEBUG  
     cout << "启动kernel: blocks=" << blocks << ", threads_per_block=" << threads_per_block << endl;
     cout << "总线程数: " << blocks * threads_per_block << ", guess数量: " << guesscount << endl;
 #endif
@@ -447,27 +488,61 @@ auto start_launch = system_clock::now();
 #ifdef TIME_COUNT
 auto end_launch = system_clock::now();
 auto duration_launch = duration_cast<microseconds>(end_launch - start_launch);
-double time_launch = double(duration_launch.count()) * microseconds::period::num / microseconds::period::den;
-
-cout << "time launch one batch :" << time_launch << endl;
+time_launch_task += double(duration_launch.count()) * microseconds::period::num / microseconds::period::den;
 
 // 完成计算到填好
 auto start_after_launch = system_clock::now();
 #endif
 
-
+#ifdef TIME_COUNT
+auto start_memcpy_toh = system_clock::now();
+#endif
     CUDA_CHECK(cudaMemcpy(h_guess_buffer, d_guess_buffer, result_len * sizeof(char), cudaMemcpyDeviceToHost));
 
-    //6. 将结果填入guesses
+#ifdef TIME_COUNT
+auto end_memcpy_toh = system_clock::now();
+auto duration_memcpy_toh = duration_cast<microseconds>(end_memcpy_toh - start_memcpy_toh);
+time_memcpy_toh += double(duration_memcpy_toh.count()) * microseconds::period::num / microseconds::period::den;
+#endif
 
+    //6. 将结果填入guesses
+#ifdef TIME_COUNT
+auto start_string_process = system_clock::now();
+#endif
+    //BUG 由于想用string_view ，然后char*指针想在外面释放，所以为了简便，每次生成完都要hash然后把
+    // 相应指针释放了， 不然会出事。 所以每个gpu batch 的长度要大于100000
     // 由于每个 seg 对应的 guess 们的长度是一样的， 所以这么搞
-    for(int i = 0; i < seg_ids.size(); i++) {
-        for(int j = 0; j < seg_value_count[i]; j++) {
-            int start_offset = res_offset[i] + j*(seg_lens[i] + prefix_lens[i]);
-            string guess(h_guess_buffer + start_offset, h_guess_buffer + start_offset + seg_lens[i] + prefix_lens[i]);
-            guesses.push_back(guess);
+    // for(int i = 0; i < seg_ids.size(); i++) {
+    //     for(int j = 0; j < seg_value_count[i]; j++) {
+    //         int start_offset = res_offset[i] + j*(seg_lens[i] + prefix_lens[i]);
+    //         string guess(h_guess_buffer + start_offset, h_guess_buffer + start_offset + seg_lens[i] + prefix_lens[i]);
+    //         guesses.push_back(guess);
+    //     }
+    // }
+
+    guesses.reserve(guesscount);
+    for (int i = 0; i < seg_ids.size(); i++) {
+        for (int j = 0; j < seg_value_count[i]; j++) {
+            int start_offset = res_offset[i] + j * (seg_lens[i] + prefix_lens[i]);
+            std::string_view guess(
+                h_guess_buffer + start_offset,
+                seg_lens[i] + prefix_lens[i]
+            );
+            guesses.emplace_back(
+                h_guess_buffer + start_offset,
+                seg_lens[i] + prefix_lens[i]
+            );
         }
     }
+
+
+#ifdef TIME_COUNT
+auto end_string_process = system_clock::now();
+auto duration_string_process = duration_cast<microseconds>(end_string_process - start_string_process);
+time_string_process += double(duration_string_process.count()) * microseconds::period::num / microseconds::period::den;
+#endif
+
+
 
     //7. 释放内存
 #ifdef DEBUG
@@ -482,6 +557,7 @@ auto start_after_launch = system_clock::now();
     CUDA_CHECK(cudaFree(temp.prefix_offsets));
     CUDA_CHECK(cudaFree(temp.prefix_lens));
     CUDA_CHECK(cudaFree(temp.seg_value_counts));
+    CUDA_CHECK(cudaFree(temp.cumulative_guess_offsets)); // 释放累积偏移数组
     CUDA_CHECK(cudaFree(temp.output_offsets));
     CUDA_CHECK(cudaFree(d_tasks));
     CUDA_CHECK(cudaFree(d_guess_buffer));
@@ -494,15 +570,16 @@ auto start_after_launch = system_clock::now();
     temp.prefix_offsets = nullptr;
     temp.prefix_lens = nullptr;
     temp.seg_value_counts = nullptr;
+    temp.cumulative_guess_offsets = nullptr; // 置空累积偏移数组指针
     temp.prefixs = nullptr;
     temp.output_offsets = nullptr;
     d_tasks = nullptr;
     d_guess_buffer = nullptr;
     
     // 释放CPU内存
-    delete[] h_guess_buffer;
+    // delete[] h_guess_buffer;
     delete[] h_tasks.prefix_offsets;
-    h_guess_buffer = nullptr;
+    // h_guess_buffer = nullptr;
     h_tasks.prefix_offsets = nullptr;
 
 #ifdef DEBUG
@@ -516,18 +593,11 @@ auto start_after_launch = system_clock::now();
 #ifdef TIME_COUNT
 auto end_after_launch = system_clock::now();
 auto duration_after_launch = duration_cast<microseconds>(end_after_launch - start_after_launch);
-double time_after_launch = double(duration_after_launch.count()) * microseconds::period::num / microseconds::period::den;
-
-
-cout << "time after launch one batch :" << time_after_launch << endl ;
-
+time_after_launch += double(duration_after_launch.count()) * microseconds::period::num / microseconds::period::den;
 
 auto end_one_batch = system_clock::now();
 auto duration_one_batch = duration_cast<microseconds>(end_one_batch - start_one_batch);
-double time_one_batch = double(duration_one_batch.count()) * microseconds::period::num / microseconds::period::den;
-
-
-cout << "time  one batch :" << time_one_batch << endl <<endl <<endl;
+time_all_batch += double(duration_one_batch.count()) * microseconds::period::num / microseconds::period::den;
 #endif
 }
 

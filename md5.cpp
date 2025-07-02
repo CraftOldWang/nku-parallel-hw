@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <assert.h>
 #include <chrono>
+#include <string_view>
 
 using namespace std;
 using namespace chrono;
@@ -12,11 +13,14 @@ using namespace chrono;
  * @param[out] n_byte 用于给调用者传递额外的返回值，即最终Byte数组的长度
  * @return Byte消息数组
  */
-Byte *StringProcess(string input, int *n_byte)
+Byte *StringProcess(string_view input, int *n_byte)
 {
 	// 将输入的字符串转换为Byte为单位的数组
-	Byte *blocks = (Byte *)input.c_str();
-	int length = input.length();
+	// Byte *blocks = (Byte *)input.c_str();
+	// int length = input.length();
+    const Byte *blocks = reinterpret_cast<const Byte*>(input.data());
+    int length = input.size();
+
 
 	// 计算原始消息长度（以比特为单位）
 	int bitLength = length * 8;
@@ -80,7 +84,7 @@ Byte *StringProcess(string input, int *n_byte)
  * @param[out] state 用于给调用者传递额外的返回值，即最终的缓冲区，也就是MD5的结果
  * @return Byte消息数组
  */
-void MD5Hash(string input, bit32 *state)
+void MD5Hash(string_view input, bit32 *state)
 {
 
 	Byte *paddedMessage;
