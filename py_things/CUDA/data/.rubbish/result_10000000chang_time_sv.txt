@@ -1,0 +1,149 @@
+
+--- 标准 MD5 CUDA 实验批次 [Wed Jul  2 20:08:24 2025
+] ---
+Training...
+Training phase 1: reading and parsing passwords...
+Training phase 2: Ordering segment values and PTs...
+total pts18966
+Ordering letters
+Ordering digits
+ordering symbols
+模型训练完成，耗时: 12.6108 秒
+
+==========================================
+实验 #1: 数据集/小批次
+猜测上限: 10000000, 批处理大小: 1000000， GPU批处理大小：10000000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 10000000, 批处理大小: 1000000
+Guesses generated: 10106852
+Guess time: 0.540622 seconds
+Hash time: 0 seconds
+Train time: 12.6108 seconds
+Total time: 0.540622 seconds
+Real Guess time: 0.540622 seconds
+-------------------
+
+==========================================
+实验 #2: 数据集/小批次
+猜测上限: 15000000, 批处理大小: 1000000， GPU批处理大小：10000000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 15000000, 批处理大小: 1000000
+Guesses generated: 20114624
+Guess time: 0.592937 seconds
+Hash time: 2.12169 seconds
+Train time: 12.6108 seconds
+Total time: 2.71463 seconds
+Real Guess time: 0.588513 seconds
+-------------------
+
+==========================================
+实验 #3: 数据集/小批次
+猜测上限: 20000000, 批处理大小: 1000000， GPU批处理大小：10000000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 20000000, 批处理大小: 1000000
+Guesses generated: 20114624
+Guess time: 0.593356 seconds
+Hash time: 2.11608 seconds
+Train time: 12.6108 seconds
+Total time: 2.70944 seconds
+Real Guess time: 0.588926 seconds
+-------------------
+
+==========================================
+实验 #4: 数据集/小批次
+猜测上限: 25000000, 批处理大小: 1000000， GPU批处理大小：10000000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 25000000, 批处理大小: 1000000
+Guesses generated: 30178487
+Guess time: 0.847255 seconds
+Hash time: 4.21554 seconds
+Train time: 12.6108 seconds
+Total time: 5.0628 seconds
+Real Guess time: 0.838435 seconds
+-------------------
+
+==========================================
+实验 #5: 数据集/小批次
+猜测上限: 30000000, 批处理大小: 1000000， GPU批处理大小：10000000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 30000000, 批处理大小: 1000000
+Guesses generated: 30178487
+Guess time: 0.848844 seconds
+Hash time: 4.21435 seconds
+Train time: 12.6108 seconds
+Total time: 5.0632 seconds
+Real Guess time: 0.84001 seconds
+-------------------
+
+==========================================
+实验 #6: 数据集/小批次
+猜测上限: 35000000, 批处理大小: 1000000， GPU批处理大小：10000000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 35000000, 批处理大小: 1000000
+Guesses generated: 40183793
+Guess time: 1.10326 seconds
+Hash time: 6.31958 seconds
+Train time: 12.6108 seconds
+Total time: 7.42284 seconds
+Real Guess time: 1.08976 seconds
+-------------------
+
+==========================================
+实验 #7: 数据集/小批次
+猜测上限: 40000000, 批处理大小: 1000000， GPU批处理大小：10000000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 40000000, 批处理大小: 1000000
+Guesses generated: 40183793
+Guess time: 1.09463 seconds
+Hash time: 6.31303 seconds
+Train time: 12.6108 seconds
+Total time: 7.40766 seconds
+Real Guess time: 1.08281 seconds
+-------------------
+
+==========================================
+实验 #8: 数据集/小批次
+猜测上限: 45000000, 批处理大小: 1000000， GPU批处理大小：10000000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 45000000, 批处理大小: 1000000
+Guesses generated: 50183971
+Guess time: 1.37612 seconds
+Hash time: 8.41367 seconds
+Train time: 12.6108 seconds
+Total time: 9.78979 seconds
+Real Guess time: 1.36013 seconds
+-------------------
+
+==========================================
+实验 #9: 数据集/小批次
+猜测上限: 50000000, 批处理大小: 1000000， GPU批处理大小：10000000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 50000000, 批处理大小: 1000000
+Guesses generated: 50183971
+Guess time: 1.37353 seconds
+Hash time: 8.40008 seconds
+Train time: 12.6108 seconds
+Total time: 9.7736 seconds
+Real Guess time: 1.35764 seconds
+-------------------
+
+--- 实验批次结束 ---
+
