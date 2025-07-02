@@ -1,0 +1,231 @@
+
+--- 标准 MD5 CUDA 实验批次 [Wed Jul  2 19:30:41 2025
+] ---
+Training...
+Training phase 1: reading and parsing passwords...
+Training phase 2: Ordering segment values and PTs...
+total pts18966
+Ordering letters
+Ordering digits
+ordering symbols
+time transfer gpu :0.160243
+模型训练完成，耗时: 12.5494 秒
+
+==========================================
+实验 #1: 数据集/小批次
+猜测上限: 10000000, 批处理大小: 1000000， GPU批处理大小：10000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 10000000, 批处理大小: 1000000
+Guesses generated: 10106852
+Guess time: 0.526242 seconds
+Hash time: 1.99893 seconds
+Train time: 12.5494 seconds
+Total time: 2.52517 seconds
+time all pop_next  :0.525883
+time all check  :0
+time gpu_kernel :0.359726
+time_add_task:4e-06
+time_launch_task:0.003974
+time_before_launch:0.151407
+time_after_launch:0.204047
+time_string_process0.156429
+time_all_batch:0.359622
+
+-------------------
+
+==========================================
+实验 #2: 数据集/小批次
+猜测上限: 15000000, 批处理大小: 1000000， GPU批处理大小：10000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 15000000, 批处理大小: 1000000
+Guesses generated: 15033107
+Guess time: 0.721192 seconds
+Hash time: 2.9418 seconds
+Train time: 12.5494 seconds
+Total time: 3.66299 seconds
+time all pop_next  :0.720678
+time all check  :0
+time gpu_kernel :0.841679
+time_add_task:5e-06
+time_launch_task:0.014436
+time_before_launch:0.364044
+time_after_launch:0.462475
+time_string_process0.346448
+time_all_batch:0.841432
+
+-------------------
+
+==========================================
+实验 #3: 数据集/小批次
+猜测上限: 20000000, 批处理大小: 1000000， GPU批处理大小：10000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 20000000, 批处理大小: 1000000
+Guesses generated: 20035648
+Guess time: 1.00003 seconds
+Hash time: 4.05896 seconds
+Train time: 12.5494 seconds
+Total time: 5.059 seconds
+time all pop_next  :0.999315
+time all check  :0
+time gpu_kernel :1.50978
+time_add_task:1.1e-05
+time_launch_task:0.029279
+time_before_launch:0.672715
+time_after_launch:0.806444
+time_string_process0.60049
+time_all_batch:1.50933
+
+-------------------
+
+==========================================
+实验 #4: 数据集/小批次
+猜测上限: 25000000, 批处理大小: 1000000， GPU批处理大小：10000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 25000000, 批处理大小: 1000000
+Guesses generated: 25043101
+Guess time: 1.21745 seconds
+Hash time: 5.17322 seconds
+Train time: 12.5494 seconds
+Total time: 6.39066 seconds
+time all pop_next  :1.2166
+time all check  :0
+time gpu_kernel :2.33629
+time_add_task:1.6e-05
+time_launch_task:0.041793
+time_before_launch:1.05501
+time_after_launch:1.23737
+time_string_process0.91709
+time_all_batch:2.33558
+
+-------------------
+
+==========================================
+实验 #5: 数据集/小批次
+猜测上限: 30000000, 批处理大小: 1000000， GPU批处理大小：10000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 30000000, 批处理大小: 1000000
+Guesses generated: 30033073
+Guess time: 1.55262 seconds
+Hash time: 6.06658 seconds
+Train time: 12.5494 seconds
+Total time: 7.6192 seconds
+time all pop_next  :1.55166
+time all check  :0
+time gpu_kernel :3.44238
+time_add_task:2.3e-05
+time_launch_task:0.060635
+time_before_launch:1.56646
+time_after_launch:1.81227
+time_string_process1.29701
+time_all_batch:3.44138
+
+-------------------
+
+==========================================
+实验 #6: 数据集/小批次
+猜测上限: 35000000, 批处理大小: 1000000， GPU批处理大小：10000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 35000000, 批处理大小: 1000000
+Guesses generated: 35080462
+Guess time: 1.70856 seconds
+Hash time: 7.22323 seconds
+Train time: 12.5494 seconds
+Total time: 8.9318 seconds
+time all pop_next  :1.70749
+time all check  :0
+time gpu_kernel :4.64095
+time_add_task:3.2e-05
+time_launch_task:0.088804
+time_before_launch:2.13875
+time_after_launch:2.40922
+time_string_process1.74059
+time_all_batch:4.63955
+
+-------------------
+
+==========================================
+实验 #7: 数据集/小批次
+猜测上限: 40000000, 批处理大小: 1000000， GPU批处理大小：10000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 40000000, 批处理大小: 1000000
+Guesses generated: 40101264
+Guess time: 1.92978 seconds
+Hash time: 8.30354 seconds
+Train time: 12.5494 seconds
+Total time: 10.2333 seconds
+time all pop_next  :1.92858
+time all check  :0
+time gpu_kernel :6.00557
+time_add_task:3.7e-05
+time_launch_task:0.127314
+time_before_launch:2.78085
+time_after_launch:3.09194
+time_string_process2.24639
+time_all_batch:6.00374
+
+-------------------
+
+==========================================
+实验 #8: 数据集/小批次
+猜测上限: 45000000, 批处理大小: 1000000， GPU批处理大小：10000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 45000000, 批处理大小: 1000000
+Guesses generated: 45071088
+Guess time: 2.21709 seconds
+Hash time: 9.42167 seconds
+Train time: 12.5494 seconds
+Total time: 11.6388 seconds
+time all pop_next  :2.21573
+time all check  :0
+time gpu_kernel :7.57508
+time_add_task:4.7e-05
+time_launch_task:0.164069
+time_before_launch:3.54403
+time_after_launch:3.86004
+time_string_process2.81406
+time_all_batch:7.57276
+
+-------------------
+
+==========================================
+实验 #9: 数据集/小批次
+猜测上限: 50000000, 批处理大小: 1000000， GPU批处理大小：10000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 50000000, 批处理大小: 1000000
+Guesses generated: 50080854
+Guess time: 2.43666 seconds
+Hash time: 10.3582 seconds
+Train time: 12.5494 seconds
+Total time: 12.7948 seconds
+time all pop_next  :2.43518
+time all check  :0
+time gpu_kernel :9.29702
+time_add_task:5.7e-05
+time_launch_task:0.196759
+time_before_launch:4.38105
+time_after_launch:4.71057
+time_string_process3.44588
+time_all_batch:9.29413
+
+-------------------
+
+--- 实验批次结束 ---
+

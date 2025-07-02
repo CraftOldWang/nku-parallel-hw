@@ -1,0 +1,249 @@
+
+--- 标准 MD5 CUDA 实验批次 [Wed Jul  2 20:28:54 2025
+] ---
+Training...
+Training phase 1: reading and parsing passwords...
+Training phase 2: Ordering segment values and PTs...
+total pts18966
+Ordering letters
+Ordering digits
+ordering symbols
+time transfer gpu :0.155022
+模型训练完成，耗时: 12.4513 秒
+
+==========================================
+实验 #1: 数据集/小批次
+猜测上限: 10000000, 批处理大小: 1000000， GPU批处理大小：5000000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 10000000, 批处理大小: 1000000
+Guesses generated: 10106852
+Guess time: 0.345388 seconds
+Hash time: 1.0548 seconds
+Train time: 12.4513 seconds
+Total time: 1.40019 seconds
+Real Guess time: 0.343199 seconds
+time all pop_next  :0.342811
+time all check  :0
+time gpu_kernel :0.181754
+time_add_task:3.8e-05
+time_launch_task:0.00612
+time_before_launch:0.001635
+time_after_launch:0.173956
+time_string_process0.109419
+time_memcpy_toh0.063516
+time_all_batch:0.181712
+
+-------------------
+
+==========================================
+实验 #2: 数据集/小批次
+猜测上限: 15000000, 批处理大小: 1000000， GPU批处理大小：5000000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 15000000, 批处理大小: 1000000
+Guesses generated: 15114795
+Guess time: 0.390915 seconds
+Hash time: 2.12154 seconds
+Train time: 12.4513 seconds
+Total time: 2.51245 seconds
+Real Guess time: 0.386246 seconds
+time all pop_next  :0.385733
+time all check  :0
+time gpu_kernel :0.333354
+time_add_task:3.9e-05
+time_launch_task:0.00841
+time_before_launch:0.007601
+time_after_launch:0.317291
+time_string_process0.15568
+time_memcpy_toh0.159201
+time_all_batch:0.333307
+
+-------------------
+
+==========================================
+实验 #3: 数据集/小批次
+猜测上限: 20000000, 批处理大小: 1000000， GPU批处理大小：5000000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 20000000, 批处理大小: 1000000
+Guesses generated: 20124430
+Guess time: 0.530352 seconds
+Hash time: 3.16276 seconds
+Train time: 12.4513 seconds
+Total time: 3.69312 seconds
+Real Guess time: 0.52354 seconds
+time all pop_next  :0.522786
+time all check  :0
+time gpu_kernel :0.534815
+time_add_task:3.9e-05
+time_launch_task:0.013735
+time_before_launch:0.012702
+time_after_launch:0.508313
+time_string_process0.216778
+time_memcpy_toh0.285363
+time_all_batch:0.534759
+
+-------------------
+
+==========================================
+实验 #4: 数据集/小批次
+猜测上限: 25000000, 批处理大小: 1000000， GPU批处理大小：5000000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 25000000, 批处理大小: 1000000
+Guesses generated: 25153156
+Guess time: 0.641161 seconds
+Hash time: 4.21141 seconds
+Train time: 12.4513 seconds
+Total time: 4.85257 seconds
+Real Guess time: 0.632158 seconds
+time all pop_next  :0.631276
+time all check  :0
+time gpu_kernel :0.788941
+time_add_task:4e-05
+time_launch_task:0.019885
+time_before_launch:0.021155
+time_after_launch:0.747817
+time_string_process0.293078
+time_memcpy_toh0.446333
+time_all_batch:0.788874
+
+-------------------
+
+==========================================
+实验 #5: 数据集/小批次
+猜测上限: 30000000, 批处理大小: 1000000， GPU批处理大小：5000000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 30000000, 批处理大小: 1000000
+Guesses generated: 30178487
+Guess time: 0.74446 seconds
+Hash time: 5.26607 seconds
+Train time: 12.4513 seconds
+Total time: 6.01053 seconds
+Real Guess time: 0.733068 seconds
+time all pop_next  :0.732102
+time all check  :0
+time gpu_kernel :1.08926
+time_add_task:4.2e-05
+time_launch_task:0.02681
+time_before_launch:0.026205
+time_after_launch:1.03614
+time_string_process0.384799
+time_memcpy_toh0.640214
+time_all_batch:1.08918
+
+-------------------
+
+==========================================
+实验 #6: 数据集/小批次
+猜测上限: 35000000, 批处理大小: 1000000， GPU批处理大小：5000000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 35000000, 批处理大小: 1000000
+Guesses generated: 35246582
+Guess time: 0.904326 seconds
+Hash time: 6.32824 seconds
+Train time: 12.4513 seconds
+Total time: 7.23257 seconds
+Real Guess time: 0.890597 seconds
+time all pop_next  :0.889504
+time all check  :0
+time gpu_kernel :1.48602
+time_add_task:4.3e-05
+time_launch_task:0.032183
+time_before_launch:0.03882
+time_after_launch:1.41489
+time_string_process0.533147
+time_memcpy_toh0.86655
+time_all_batch:1.48592
+
+-------------------
+
+==========================================
+实验 #7: 数据集/小批次
+猜测上限: 40000000, 批处理大小: 1000000， GPU批处理大小：5000000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 40000000, 批处理大小: 1000000
+Guesses generated: 40254860
+Guess time: 0.966227 seconds
+Hash time: 7.3859 seconds
+Train time: 12.4513 seconds
+Total time: 8.35212 seconds
+Real Guess time: 0.950399 seconds
+time all pop_next  :0.949164
+time all check  :0
+time gpu_kernel :1.88729
+time_add_task:4.8e-05
+time_launch_task:0.040459
+time_before_launch:0.046611
+time_after_launch:1.80006
+time_string_process0.655744
+time_memcpy_toh1.12537
+time_all_batch:1.88717
+
+-------------------
+
+==========================================
+实验 #8: 数据集/小批次
+猜测上限: 45000000, 批处理大小: 1000000， GPU批处理大小：5000000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 45000000, 批处理大小: 1000000
+Guesses generated: 45279316
+Guess time: 1.10376 seconds
+Hash time: 8.43412 seconds
+Train time: 12.4513 seconds
+Total time: 9.53788 seconds
+Real Guess time: 1.08766 seconds
+time all pop_next  :1.08633
+time all check  :0
+time gpu_kernel :2.34513
+time_add_task:5.3e-05
+time_launch_task:0.056483
+time_before_launch:0.057649
+time_after_launch:2.23081
+time_string_process0.792722
+time_memcpy_toh1.41433
+time_all_batch:2.34499
+
+-------------------
+
+==========================================
+实验 #9: 数据集/小批次
+猜测上限: 50000000, 批处理大小: 1000000， GPU批处理大小：5000000
+==========================================
+
+--- 实验结果 ---
+猜测上限: 50000000, 批处理大小: 1000000
+Guesses generated: 50287140
+Guess time: 1.2105 seconds
+Hash time: 9.49129 seconds
+Train time: 12.4513 seconds
+Total time: 10.7018 seconds
+Real Guess time: 1.19116 seconds
+time all pop_next  :1.18969
+time all check  :0
+time gpu_kernel :2.84521
+time_add_task:5.9e-05
+time_launch_task:0.066443
+time_before_launch:0.067222
+time_after_launch:2.71132
+time_string_process0.945741
+time_memcpy_toh1.73715
+time_all_batch:2.84504
+
+-------------------
+
+--- 实验批次结束 ---
+

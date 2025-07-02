@@ -84,8 +84,6 @@ private:
 //     return task_count - 1; // 安全返回
 // }
 
-
-
 // 生成猜测的 kernal 函数 。生成的猜测放到 d_guess_buffer 上
 __global__ void generate_guesses_kernel(
     GpuOrderedValuesData* gpu_data,
