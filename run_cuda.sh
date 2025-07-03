@@ -28,19 +28,47 @@ mkdir -p build
 # #TODO 试试 1 10 100 1000 10000 100000 1000000 10000000
 # 遍历三个不同的 batch size
 # 用那个 string_view 的话就一次需要产出 >=100000个 guess
-for bsize in  100000 1000000 5000000 10000000 ; do
+# for bsize in  100000 1000000 5000000 10000000 ; do
+#     echo "🔧 编译 cuda GPU_BATCH_SIZE=$bsize"
+
+#     nvcc main_cuda_ori.cpp guessing_cuda.cu guessing.cpp train.cpp md5.cpp \
+#         -o build/guess_bs${bsize} \
+#         -std=c++17 \
+#         -O2 \
+#         -arch=sm_75 \
+#         -lcudart \
+#         -DNDEBUG \
+#         -DGUESS_PER_THREAD=1 \
+#         -DGPU_BATCH_SIZE=${bsize} \
+#         --use_fast_math \
+
+#     if [ $? -ne 0 ]; then
+#         echo "❌ 编译失败，跳过 batch size = $bsize"
+#         continue
+#     fi
+
+#     echo "🚀 运行 GPU_BATCH_SIZE=$bsize ， reserve 并 emplace_back"
+#     ./build/guess_bs${bsize} > ./cur_result/result_${bsize}last_ver.txt
+#     echo "✅ 输出保存到 result_${bsize}last_ver.txt"
+# done
+
+# win 本地使用的
+CL_PATH="D:\Softwares\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.41.34120\bin\Hostx64\x64\cl.exe"
+for bsize in 100000 1000000 5000000 10000000; do
     echo "🔧 编译 cuda GPU_BATCH_SIZE=$bsize"
 
-    nvcc main_cuda_ori.cpp guessing_cuda.cu guessing.cpp train.cpp md5.cpp \
+    nvcc -ccbin "$CL_PATH" \
+        main_cuda_ori.cpp guessing_cuda.cu guessing.cpp train.cpp md5.cpp \
         -o build/guess_bs${bsize} \
         -std=c++17 \
         -O2 \
-        -arch=sm_75 \
+        -arch=sm_89 \
         -lcudart \
         -DNDEBUG \
         -DGUESS_PER_THREAD=1 \
         -DGPU_BATCH_SIZE=${bsize} \
         --use_fast_math \
+        -Xcompiler "/source-charset:utf-8 /execution-charset:utf-8 /EHsc"
 
     if [ $? -ne 0 ]; then
         echo "❌ 编译失败，跳过 batch size = $bsize"
@@ -48,9 +76,11 @@ for bsize in  100000 1000000 5000000 10000000 ; do
     fi
 
     echo "🚀 运行 GPU_BATCH_SIZE=$bsize ， reserve 并 emplace_back"
-    ./build/guess_bs${bsize} > ./cur_result/result_${bsize}last_ver.txt
-    echo "✅ 输出保存到 result_${bsize}last_ver.txt"
+    ./build/guess_bs${bsize} > ./cur_result/result_${bsize}cuda_only.txt
+    echo "✅ 输出保存到 result_${bsize}cuda_only.txt"
 done
+
+
 
 
 # 遍历 guess_per_thread GUESS_PER_THREAD 
