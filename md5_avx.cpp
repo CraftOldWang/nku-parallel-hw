@@ -2,10 +2,11 @@
 #include "md5.h"
 #include <immintrin.h>
 #include <cstring>
+#include <string_view>
 
-extern Byte *StringProcess(string input, int *n_byte);
+extern Byte *StringProcess(string_view input, int *n_byte);
 
-void MD5Hash_AVX(string *input, __m256i *state)
+void MD5Hash_AVX(string_view *input, __m256i *state)
 {
     // 预处理步骤 - 为8个字符串准备填充后的消息
     Byte **paddedMessages = new Byte*[8];
