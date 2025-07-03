@@ -62,14 +62,14 @@ void async_gpu_task(AsyncGpuTask* task_data, PriorityQueue& q) {
         }
         
     } catch (const std::exception& e) {
-        std::cerr << "GPU异步任务错误: " << e.what() << std::endl;
-        // 出错时也要清理GPU缓冲区
+        std::cerr << "GPU async task error: " << e.what() << std::endl;
+        // Clean up GPU buffer on error
         if (task_data->gpu_buffer != nullptr) {
             delete[] task_data->gpu_buffer;
         }
     }
     
-    // 清理任务数据
+    // Clean up task data
     delete task_data;
 }
 
@@ -293,10 +293,10 @@ void SegmentLengthMaps::init(PriorityQueue& q) {
     
     initialized = true;
 #ifdef DEBUG
-cout << "初始化长度映射完成:" << endl;
-cout << "  字母长度映射: " << letter_length_to_id.size() << " 种长度" << endl;
-cout << "  数字长度映射: " << digit_length_to_id.size() << " 种长度" << endl;
-cout << "  符号长度映射: " << symbol_length_to_id.size() << " 种长度" << endl;
+cout << "Length mapping initialization completed:" << endl;
+cout << "  Letter length mappings: " << letter_length_to_id.size() << " types" << endl;
+cout << "  Digit length mappings: " << digit_length_to_id.size() << " types" << endl;
+cout << "  Symbol length mappings: " << symbol_length_to_id.size() << " types" << endl;
 #endif
 }
 
@@ -325,10 +325,10 @@ auto start_before_launch = system_clock::now();
     vector<int> res_offset;// 结果char* 中， 每个seg对应的一坨guess的开始offset。 
 
 #ifdef DEBUG
-    cout << "=== TaskManager::launch_gpu_kernel 调试信息 ===" << endl;
-    cout << "任务数量: " << taskcount << endl;
-    cout << "预计guess数量: " << guesscount << endl;
-    cout << "Segment信息:" << endl;
+    cout << "=== TaskManager::launch_gpu_kernel Debug Info ===" << endl;
+    cout << "Task count: " << taskcount << endl;
+    cout << "Expected guess count: " << guesscount << endl;
+    cout << "Segment info:" << endl;
     for (int i = 0; i < taskcount; i++) {
         cout << "  Task " << i << ": type=" << seg_types[i] 
              << ", id=" << seg_ids[i] 
@@ -345,8 +345,8 @@ auto start_before_launch = system_clock::now();
 
 
 #ifdef DEBUG
-    cout << "\n连接后的prefixes: '" << all_prefixes << "'" << endl;
-    cout << "连接后的prefixes长度: " << all_prefixes.length() << endl;
+    cout << "\nConcatenated prefixes: '" << all_prefixes << "'" << endl;
+    cout << "Concatenated prefixes length: " << all_prefixes.length() << endl;
 #endif
 
 
@@ -359,19 +359,19 @@ auto start_before_launch = system_clock::now();
 
 
 #ifdef DEBUG
-    cout << "\nPrefix偏移信息:" << endl;
+    cout << "\nPrefix offset info:" << endl;
     for (size_t i = 0; i <= prefixs.size(); i++) {
         cout << "  prefix_offsets[" << i << "] = " << h_tasks.prefix_offsets[i] << endl;
     }
     
-    cout << "\n验证prefix提取:" << endl;
+    cout << "\nVerify prefix extraction:" << endl;
     for (size_t i = 0; i < prefixs.size(); i++) {
         int start = h_tasks.prefix_offsets[i];
         int len = prefix_lens[i];
         string extracted_prefix(all_prefixes.substr(start, len));
-        cout << "  Task " << i << ": 原始='" << prefixs[i] 
-             << "', 提取='" << extracted_prefix << "'" 
-             << " " << (prefixs[i] == extracted_prefix ? "✓" : "✗") << endl;
+        cout << "  Task " << i << ": original='" << prefixs[i] 
+             << "', extracted='" << extracted_prefix << "'" 
+             << " " << (prefixs[i] == extracted_prefix ? "RIGHT" : "WRONG") << endl;
     }
 #endif
 
@@ -393,25 +393,25 @@ auto start_before_launch = system_clock::now();
 
 
 #ifdef DEBUG
-    cout << "\n结果缓冲区计算:" << endl;
-    cout << "总结果长度: " << result_len << " 字符" << endl;
-    cout << "每个Task的偏移和长度:" << endl;
+    cout << "\nResult buffer calculation:" << endl;
+    cout << "Total result length: " << result_len << " characters" << endl;
+    cout << "Each Task's offset and length:" << endl;
     for(int i = 0; i < seg_value_count.size(); i++){
         int task_total_len = seg_value_count[i] * (seg_lens[i] + prefix_lens[i]);
         cout << "  Task " << i << ": offset=" << res_offset[i] 
-             << ", 单个guess长度=" << (seg_lens[i] + prefix_lens[i])
-             << ", guess数量=" << seg_value_count[i]
-             << ", 总长度=" << task_total_len << endl;
+             << ", single guess length=" << (seg_lens[i] + prefix_lens[i])
+             << ", guess count=" << seg_value_count[i]
+             << ", total length=" << task_total_len << endl;
     }
     
-    // 验证总长度计算
+    // Verify total length calculation
     int calculated_total = 0;
     for(int i = 0; i < seg_value_count.size(); i++){
         calculated_total += seg_value_count[i] * (seg_lens[i] + prefix_lens[i]);
     }
-    cout << "验证总长度: " << calculated_total << " (应该等于 " << result_len << ") " 
-         << (calculated_total == result_len ? "✓" : "✗") << endl;
-    cout << "\n累积偏移数组:" << endl;
+    cout << "Verify total length: " << calculated_total << " (should equal " << result_len << ") " 
+         << (calculated_total == result_len ? "RIGHT" : "WRONG") << endl;
+    cout << "\nCumulative offset array:" << endl;
     for(int i = 0; i <= taskcount; i++){
         cout << "  cumulative_offsets[" << i << "] = " << cumulative_offsets[i] << endl;
     }
@@ -424,23 +424,23 @@ auto start_before_launch = system_clock::now();
 
 
 #ifdef DEBUG
-    // 检查内存分配
+    // Check memory allocation
     if (h_guess_buffer == nullptr) {
-        cout << "错误: 无法分配 " << result_len << " 字节的内存!" << endl;
+        cout << "Error: Unable to allocate " << result_len << " bytes of memory!" << endl;
         return;
     } else {
-        cout << "成功分配 " << result_len << " 字节的主机内存" << endl;
+        cout << "Successfully allocated " << result_len << " bytes of host memory" << endl;
     }
     
-    // 验证数据一致性
-    cout << "\n数据一致性检查:" << endl;
+    // Verify data consistency
+    cout << "\nData consistency check:" << endl;
     int total_guesses_check = 0;
     for (int i = 0; i < seg_value_count.size(); i++) {
         total_guesses_check += seg_value_count[i];
     }
-    cout << "计算得出的总guess数: " << total_guesses_check 
-         << " (应该等于 " << guesscount << ") " 
-         << (total_guesses_check == guesscount ? "✓" : "✗") << endl;
+    cout << "Calculated total guess count: " << total_guesses_check 
+         << " (should equal " << guesscount << ") " 
+         << (total_guesses_check == guesscount ? "RIGHT" : "WRONG") << endl;
     
     if (seg_types.size() != taskcount || 
         seg_ids.size() != taskcount || 
@@ -448,7 +448,7 @@ auto start_before_launch = system_clock::now();
         prefixs.size() != taskcount || 
         prefix_lens.size() != taskcount || 
         seg_value_count.size() != taskcount) {
-        cout << "警告: 数组大小不一致!" << endl;
+        cout << "Warning: Array size inconsistency!" << endl;
         cout << "  seg_types.size() = " << seg_types.size() << endl;
         cout << "  seg_ids.size() = " << seg_ids.size() << endl;
         cout << "  seg_lens.size() = " << seg_lens.size() << endl;
@@ -457,10 +457,10 @@ auto start_before_launch = system_clock::now();
         cout << "  seg_value_count.size() = " << seg_value_count.size() << endl;
         cout << "  taskcount = " << taskcount << endl;
     } else {
-        cout << "所有数组大小一致 ✓" << endl;
+        cout << "All array sizes consistent RIGHT" << endl;
     }
     
-    cout << "=== 调试信息结束 ===" << endl << endl;
+    cout << "=== Debug info end ===" << endl << endl;
 #endif
 
     //2. 分配gpu 内存 以及 
@@ -523,8 +523,8 @@ time_before_launch += double(duration_before_launch.count()) * microseconds::per
     
 //TODO ，看看每次启用多少线程， 以及尝试二分查找来找 guess对应的task
 #ifdef DEBUG  
-    cout << "启动kernel: blocks=" << blocks << ", threads_per_block=" << threads_per_block << endl;
-    cout << "总线程数: " << blocks * threads_per_block << ", guess数量: " << guesscount << endl;
+    cout << "Launch kernel: blocks=" << blocks << ", threads_per_block=" << threads_per_block << endl;
+    cout << "Total threads: " << blocks * threads_per_block << ", guess count: " << guesscount << endl;
 #endif
 
 
@@ -600,9 +600,9 @@ time_string_process += double(duration_string_process.count()) * microseconds::p
 
 
 
-    //7. 释放内存
+    //7. Release memory
 #ifdef DEBUG
-    cout << "开始释放GPU内存..." << endl;
+    cout << "Starting to release GPU memory..." << endl;
 #endif
 
     // 释放GPU内存
@@ -618,7 +618,7 @@ time_string_process += double(duration_string_process.count()) * microseconds::p
     CUDA_CHECK(cudaFree(d_tasks));
     CUDA_CHECK(cudaFree(d_guess_buffer));
     
-    // 将指针置空以避免悬空指针
+    // Set pointers to null to avoid dangling pointers
     temp_prefixs = nullptr;
     temp.seg_types = nullptr;
     temp.seg_ids = nullptr;
@@ -626,34 +626,34 @@ time_string_process += double(duration_string_process.count()) * microseconds::p
     temp.prefix_offsets = nullptr;
     temp.prefix_lens = nullptr;
     temp.seg_value_counts = nullptr;
-    temp.cumulative_guess_offsets = nullptr; // 置空累积偏移数组指针
+    temp.cumulative_guess_offsets = nullptr; // Set cumulative offset array pointer to null
     temp.prefixs = nullptr;
     temp.output_offsets = nullptr;
     d_tasks = nullptr;
     d_guess_buffer = nullptr;
     
-    // 释放CPU内存
+    // Release CPU memory
     delete[] h_tasks.prefix_offsets;
     h_tasks.prefix_offsets = nullptr;
 
 #ifdef USING_POOL
-    // 将h_guess_buffer的所有权转移给调用者
+    // Transfer ownership of h_guess_buffer to caller
     gpu_buffer_ptr = h_guess_buffer;
-    h_guess_buffer = nullptr;  // 防止在clean()中被释放
+    h_guess_buffer = nullptr;  // Prevent release in clean()
 #endif
 
 #ifndef USING_POOL
-    // 只有在非线程池模式下才在这里释放h_guess_buffer
+    // Only release h_guess_buffer here in non-thread pool mode
     delete[] h_guess_buffer;
     h_guess_buffer = nullptr;
 #endif
 
 #ifdef DEBUG
-    cout << "GPU内存释放完成" << endl;
+    cout << "GPU memory release completed" << endl;
 #endif
 
 
-    //8. 清理TaskManager
+    //8. Clean TaskManager
     clean();
 
 #ifdef TIME_COUNT
@@ -669,7 +669,7 @@ time_all_batch += double(duration_one_batch.count()) * microseconds::period::num
 
 
 void TaskManager::clean() {
-    // 清理TaskManager中的数据
+    // Clean data in TaskManager
     seg_types.clear();
     seg_ids.clear();
     seg_lens.clear();
@@ -728,27 +728,27 @@ void init_gpu_ordered_values_data(GpuOrderedValuesData*& d_gpu_data,PriorityQueu
     //cpu上的数据
     GpuOrderedValuesData h_gpu_data;
 
-    // 计算char*数组总长度
+    // Calculate total length of char* arrays
     size_t total_letter_length = 0;
     size_t total_digit_length = 0;
     size_t total_symbol_length = 0;
 
-    // 有多少个各类型的 value 
+    // Number of values of each type 
     size_t letter_offsetarr_length = 0;
     size_t digit_offsetarr_length = 0;
     size_t symbol_offsetarr_length = 0;
 
-    char* letter_all_values = nullptr;// 把各个segment 的ordered_values展平
+    char* letter_all_values = nullptr;// Flatten ordered_values of each segment
     char* digit_all_values= nullptr;
     char* symbol_all_values= nullptr;
 
-    int* letter_value_offsets= nullptr; // 每个ordered_value在letter_all_values中的起始
-    int* digits_value_offsets= nullptr; // 每个ordered_value在digit_all_values中的起始位置
-    int* symbol_value_offsets= nullptr; // 每个ordered_value在symbol_all_values中的起始
+    int* letter_value_offsets= nullptr; // Start position of each ordered_value in letter_all_values
+    int* digits_value_offsets= nullptr; // Start position of each ordered_value in digit_all_values
+    int* symbol_value_offsets= nullptr; // Start position of each ordered_value in symbol_all_values
 
-    int* letter_seg_offsets= nullptr; // 每个letter segment第一个ordered_value在value_offsets中的是哪
-    int* digit_seg_offsets= nullptr; // 每个digit segment第一个ordered_value在value_offsets中的是哪个
-    int* symbol_seg_offsets= nullptr; // 每个symbol segment第一个ordered_value在value_offsets
+    int* letter_seg_offsets= nullptr; // Which ordered_value is the first one of each letter segment in value_offsets
+    int* digit_seg_offsets= nullptr; // Which ordered_value is the first one of each digit segment in value_offsets
+    int* symbol_seg_offsets= nullptr; // Which ordered_value is the first one of each symbol segment in value_offsets
 #ifdef DEBUG
     cout <<"end init local var" <<endl;
 #endif
@@ -783,7 +783,7 @@ void init_gpu_ordered_values_data(GpuOrderedValuesData*& d_gpu_data,PriorityQueu
 #ifdef DEBUG
     cout <<"part 1.1" <<endl;
 #endif
-    // 多补了一个offset 来表示末尾，实际不对应segment 以及 value
+    // Added one more offset to represent the end, actually not corresponding to segment and value
 
     int value_offset = 0;
     int seg_offset  = 0;
@@ -802,7 +802,7 @@ void init_gpu_ordered_values_data(GpuOrderedValuesData*& d_gpu_data,PriorityQueu
 #ifdef DEBUG
     cout <<"part 1.2"<<endl;
 #endif
-    letter_seg_offsets[q.m.letters.size()] = seg_offset; // 最后补一下...其实对应长度为0
+    letter_seg_offsets[q.m.letters.size()] = seg_offset; // Fill in the last one... actually corresponds to length 0
     letter_value_offsets[letter_offsetarr_length] = value_offset;
     seg_offset = 0;
     value_offset = 0;
@@ -821,7 +821,7 @@ void init_gpu_ordered_values_data(GpuOrderedValuesData*& d_gpu_data,PriorityQueu
 #ifdef DEBUG
     cout <<"part 1.3"<<endl;
 #endif
-    digit_seg_offsets[q.m.digits.size()] = seg_offset; // 最后补一下...其实对应长度为0
+    digit_seg_offsets[q.m.digits.size()] = seg_offset; // Fill in the last one... actually corresponds to length 0
     digits_value_offsets[digit_offsetarr_length] = value_offset;
     seg_offset = 0;
     value_offset = 0;   
@@ -839,16 +839,16 @@ void init_gpu_ordered_values_data(GpuOrderedValuesData*& d_gpu_data,PriorityQueu
             }
         }
     }
-    symbol_seg_offsets[q.m.symbols.size()] = seg_offset; // 最后补一下
+    symbol_seg_offsets[q.m.symbols.size()] = seg_offset; // Fill in the last one
     symbol_value_offsets[symbol_offsetarr_length] = value_offset;
 
 #ifdef DEBUG
     cout <<"part 3" <<endl;
 #endif
-    // 相关东西都要的是地址。。。。。。。 指针只是指针， 解释成cpu or gpu 的内存 ，是看具体情景
-    // 比如cudaMemcpy 用cudaMemcpyKind kind 来区分。
+    // Related things need addresses... pointers are just pointers, interpreted as CPU or GPU memory depending on specific context
+    // For example, cudaMemcpy uses cudaMemcpyKind kind to distinguish.
 
-    //把各个指针相应数据复制到gpu上
+    // Copy data of each pointer to GPU
 #ifdef DEBUG
     printf("total_letter_length: %zu\n", total_letter_length);
     printf("total_digit_length: %zu\n", total_digit_length);
@@ -857,9 +857,9 @@ void init_gpu_ordered_values_data(GpuOrderedValuesData*& d_gpu_data,PriorityQueu
     printf("digit_offsetarr_length: %zu\n", digit_offsetarr_length);
     printf("symbol_offsetarr_length: %zu\n", symbol_offsetarr_length);
 
-    //TODO 也许可以打印一下 q.m. 里面的那些长度看看有没有问题。
+    //TODO Maybe we can print the lengths in q.m. to see if there are any problems.
 
-    // 看看letter 的前十个是否有问题。
+    // Check if the first ten letters have problems.
     for(int i=0;i<10;i++){
         segment& seg = q.m.letters[i];  
         seg.PrintSeg();
@@ -873,14 +873,14 @@ void init_gpu_ordered_values_data(GpuOrderedValuesData*& d_gpu_data,PriorityQueu
         cout << endl <<endl;
     }
 
-    // 另外俩也可以以类似方式看是否有问题。
+    // The other two can also be checked in a similar way for problems.
 #endif
 
 #ifdef DEBUG
     cout <<"part 4" <<endl;
 #endif
 
-    // 分配内存 以及复制
+    // Allocate memory and copy
     CUDA_CHECK(cudaMalloc(&h_gpu_data.letter_all_values, total_letter_length * sizeof(char)));
     CUDA_CHECK(cudaMalloc(&h_gpu_data.digit_all_values, total_digit_length * sizeof(char)));
     CUDA_CHECK(cudaMalloc(&h_gpu_data.symbol_all_values, total_symbol_length * sizeof(char)));
@@ -888,7 +888,7 @@ void init_gpu_ordered_values_data(GpuOrderedValuesData*& d_gpu_data,PriorityQueu
     CUDA_CHECK(cudaMemcpy(h_gpu_data.digit_all_values, digit_all_values, total_digit_length * sizeof(char), cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(h_gpu_data.symbol_all_values, symbol_all_values, total_symbol_length * sizeof(char), cudaMemcpyHostToDevice));
 
-    // 分配偏移数组 以及复制
+    // Allocate offset arrays and copy
     CUDA_CHECK(cudaMalloc(&h_gpu_data.letter_value_offsets, (letter_offsetarr_length+1)* sizeof(int)));
     CUDA_CHECK(cudaMalloc(&h_gpu_data.digits_value_offsets, (digit_offsetarr_length+1) * sizeof(int)));
     CUDA_CHECK(cudaMalloc(&h_gpu_data.symbol_value_offsets, (symbol_offsetarr_length+1) * sizeof(int)));
@@ -897,7 +897,7 @@ void init_gpu_ordered_values_data(GpuOrderedValuesData*& d_gpu_data,PriorityQueu
     CUDA_CHECK(cudaMemcpy(h_gpu_data.symbol_value_offsets, symbol_value_offsets, (symbol_offsetarr_length+1) * sizeof(int), cudaMemcpyHostToDevice));
 
 
-    // 分配segment偏移数组 以及复制
+    // Allocate segment offset arrays and copy
     CUDA_CHECK(cudaMalloc(&h_gpu_data.letter_seg_offsets, q.m.letters.size() * sizeof(int)));
     CUDA_CHECK(cudaMalloc(&h_gpu_data.digit_seg_offsets, q.m.digits.size() * sizeof(int)));
     CUDA_CHECK(cudaMalloc(&h_gpu_data.symbol_seg_offsets, q.m.symbols.size() * sizeof(int)));
@@ -906,11 +906,11 @@ void init_gpu_ordered_values_data(GpuOrderedValuesData*& d_gpu_data,PriorityQueu
     CUDA_CHECK(cudaMemcpy(h_gpu_data.symbol_seg_offsets, symbol_seg_offsets, q.m.symbols.size() * sizeof(int), cudaMemcpyHostToDevice));
 
 
-    //把结构体复制到gpu上
+    //Copy struct to GPU
     CUDA_CHECK(cudaMalloc(&d_gpu_data, sizeof(GpuOrderedValuesData)));
     CUDA_CHECK(cudaMemcpy(d_gpu_data, &h_gpu_data, sizeof(GpuOrderedValuesData), cudaMemcpyHostToDevice));
 
-    // 释放CPU端的临时内存
+    // Release CPU-side temporary memory
     delete[] letter_all_values;
     delete[] digit_all_values;
     delete[] symbol_all_values;
@@ -922,7 +922,7 @@ void init_gpu_ordered_values_data(GpuOrderedValuesData*& d_gpu_data,PriorityQueu
     delete[] symbol_seg_offsets;
 
 #ifdef DEBUG
-    cout << "GPU数据初始化完成，CPU临时内存已释放" << endl;
+    cout << "GPU data initialization completed, CPU temporary memory released" << endl;
 #endif
 
 }
@@ -931,14 +931,14 @@ void clean_gpu_ordered_values_data(GpuOrderedValuesData *& d_gpu_data){
     if (d_gpu_data == nullptr) return;
     
 #ifdef DEBUG
-    cout << "清理GPU ordered values 数据..." << endl;
+    cout << "Cleaning GPU ordered values data..." << endl;
 #endif
 
-    // 从GPU复制结构体到CPU以获取指针地址
+    // Copy struct from GPU to CPU to get pointer addresses
     GpuOrderedValuesData h_gpu_data;
     CUDA_CHECK(cudaMemcpy(&h_gpu_data, d_gpu_data, sizeof(GpuOrderedValuesData), cudaMemcpyDeviceToHost));
     
-    // 释放GPU上的各个数组
+    // Release each array on GPU
     if (h_gpu_data.letter_all_values) {
         CUDA_CHECK(cudaFree(h_gpu_data.letter_all_values));
         h_gpu_data.letter_all_values = nullptr;
@@ -978,16 +978,16 @@ void clean_gpu_ordered_values_data(GpuOrderedValuesData *& d_gpu_data){
         h_gpu_data.symbol_seg_offsets = nullptr;
     }
     
-    // 释放结构体本身
+    // Release the struct itself
     CUDA_CHECK(cudaFree(d_gpu_data));
     d_gpu_data = nullptr;
 
 #ifdef DEBUG
-    cout << "GPU ordered values 数据清理完成" << endl;
+    cout << "GPU ordered values data cleanup completed" << endl;
 #endif
 }
 
-// 清理全局变量的函数
+// Function to clean global variables
 void cleanup_global_cuda_resources() {
     if (gpu_data != nullptr) {
         clean_gpu_ordered_values_data(gpu_data);
@@ -995,14 +995,14 @@ void cleanup_global_cuda_resources() {
     }
     
     if (task_manager != nullptr) {
-        // 直接删就好了，STL自己会释放。
+        // Just delete directly, STL will release itself.
         // task_manager->clean();
         delete task_manager;
         task_manager = nullptr;
     }
     
 #ifdef DEBUG
-    cout << "全局CUDA资源清理完成" << endl;
+    cout << "Global CUDA resources cleanup completed" << endl;
 #endif
 }
 

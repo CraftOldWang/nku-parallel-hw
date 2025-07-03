@@ -5,7 +5,7 @@
 
 #ifdef USING_POOL
 #include "ThreadPool.h"
-extern ThreadPool* thread_pool;
+extern std::unique_ptr<ThreadPool> thread_pool;
 extern std::mutex main_data_mutex;
 extern std::mutex gpu_buffer_mutex;
 extern std::vector<char*> pending_gpu_buffers;
@@ -244,9 +244,9 @@ void PriorityQueue::Generate(PT pt)
         //BUG ?? 姑且认为 pt.max_indices[0] 其实就是a,只不过一个是pt里的副本，一个是model那里的。
         // 因为存了好几遍所以显得乱。
 
-// #ifdef TIME_COUNT
+#ifdef TIME_COUNT
 auto start_gpu_kernel = system_clock::now();
-// #endif
+#endif
 
         task_manager->add_task(a, "", *this);
         if(task_manager->guesscount > GPU_BATCH_SIZE){
@@ -267,11 +267,11 @@ auto start_gpu_kernel = system_clock::now();
 #endif
         }
 
-// #ifdef TIME_COUNT
+#ifdef TIME_COUNT
 auto end_gpu_kernel = system_clock::now();
 auto duration_gpu_kernel = duration_cast<microseconds>(end_gpu_kernel - start_gpu_kernel);
 time_gpu_kernel += double(duration_gpu_kernel.count()) * microseconds::period::num / microseconds::period::den;
-// #endif 
+#endif 
 
     }
     else

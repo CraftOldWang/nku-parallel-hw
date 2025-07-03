@@ -11,22 +11,9 @@
 #ifdef USING_POOL
 #include "ThreadPool.h"
 #include <mutex>
-
-struct AsyncGpuTask {
-    TaskManager task_manager;  // 直接移动，不用指针
-    vector<string_view> local_guesses;
-    char* gpu_buffer;
-    
-    // 移动构造函数
-    AsyncGpuTask(TaskManager&& tm) 
-        : task_manager(std::move(tm))
-        , gpu_buffer(nullptr) {
-        local_guesses.reserve(task_manager.guesscount);
-    }
-};
-
-void async_gpu_task(AsyncGpuTask* task_data, PriorityQueue& q);
 #endif
+
+
 
 
 
@@ -132,6 +119,24 @@ public:
     void clean();
     void print();
 };
+
+
+#ifdef USING_POOL
+struct AsyncGpuTask {
+    TaskManager task_manager;  // 直接移动，不用指针
+    vector<string_view> local_guesses;
+    char* gpu_buffer;
+    
+    // 移动构造函数
+    AsyncGpuTask(TaskManager&& tm) 
+        : task_manager(std::move(tm))
+        , gpu_buffer(nullptr) {
+        local_guesses.reserve(task_manager.guesscount);
+    }
+};
+
+void async_gpu_task(AsyncGpuTask* task_data, PriorityQueue& q);
+#endif
 
 
 

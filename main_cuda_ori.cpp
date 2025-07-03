@@ -58,44 +58,6 @@ void perform_hash_calculation(PriorityQueue& q, double& time_hash) {
     time_hash += double(duration.count()) * microseconds::period::num / microseconds::period::den;
 }
 
-void async_gpu_task(AsyncGpuTask* task_data, PriorityQueue& q) {
-    try {
-        // 1. 执行GPU计算（使用移动的TaskManager）
-        char* gpu_buffer = nullptr;
-        task_data->task_manager.launch_gpu_kernel(
-            task_data->local_guesses, 
-            q,
-            gpu_buffer  // 传递gpu_buffer引用
-        );
-        task_data->gpu_buffer = gpu_buffer;
-        
-        // 2. 将结果插入主guesses向量（需要加锁）
-        {
-            std::lock_guard<std::mutex> lock1(main_data_mutex);
-            std::lock_guard<std::mutex> lock2(gpu_buffer_mutex);
-            
-            // 插入猜测结果
-            q.guesses.insert(q.guesses.end(), 
-                           task_data->local_guesses.begin(), 
-                           task_data->local_guesses.end());
-            
-            // 将GPU缓冲区指针加入管理列表
-            if (task_data->gpu_buffer != nullptr) {
-                pending_gpu_buffers.push_back(task_data->gpu_buffer);
-            }
-        }
-        
-    } catch (const std::exception& e) {
-        std::cerr << "GPU异步任务错误: " << e.what() << std::endl;
-        // 出错时也要清理GPU缓冲区
-        if (task_data->gpu_buffer != nullptr) {
-            delete[] task_data->gpu_buffer;
-        }
-    }
-    
-    // 清理任务数据
-    delete task_data;
-}
 #endif
 
 //BUG 需要确保 产生的 猜测 每次 都 大于 1000000 ， 因为我只管理了一个 这个指针
@@ -180,10 +142,18 @@ int main()
     auto start_train = system_clock::now();
 // 将windows下用的main.cpp合并进来了
 #ifdef _WIN32
+
+#ifdef USING_SMALL
+    q.m.train(".\\guessdata\\small_Rockyou-singleLined-full.txt");
+#else
     q.m.train(".\\guessdata\\Rockyou-singleLined-full.txt");
+#endif
 #else
     q.m.train("./guessdata/Rockyou-singleLined-full.txt");
 #endif
+
+
+
     q.m.order();
     // 传输数据到gpu， 但是算在训练时间里？ 每次又不需要重置...
 #ifdef TIME_COUNT
