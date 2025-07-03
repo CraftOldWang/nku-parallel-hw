@@ -58,7 +58,7 @@ for bsize in 100000 1000000 5000000 10000000; do
     echo "🔧 编译 cuda GPU_BATCH_SIZE=$bsize"
 
     nvcc -ccbin "$CL_PATH" \
-        main_cuda_ori.cpp guessing_cuda.cu guessing.cpp train.cpp md5.cpp \
+        main_cuda_ori.cpp guessing_cuda.cu guessing.cpp train.cpp md5.cpp md5_avx.cpp \
         -o build/guess_bs${bsize} \
         -std=c++17 \
         -O2 \

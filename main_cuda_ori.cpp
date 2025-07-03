@@ -226,21 +226,22 @@ time_guess_part += double(guess_duration.count()) * microseconds::period::num / 
                 
                 #ifdef USING_SIMD
 
-                                
-                //TODO 用string_view 可能有问题。
-                // 使用AVX进行批处理
+                string_view passwords[8];
                 for(size_t i = 0; i < q.guesses.size(); i += 8) {
-                    string passwords[8] = {"", "", "", "", "", "", "", ""};
-                    
-                    // 填充密码数组（考虑边界情况）
-                    for (int j = 0; j < 8 && (i + j) < q.guesses.size(); ++j) {
-                        passwords[j] = q.guesses[i + j];
+                    // 改成 string_view
+                    for (int j = 0; j < 8; ++j) {
+                        if (i + j < q.guesses.size()) {
+                            passwords[j] = q.guesses[i + j];
+                        } else {
+                            passwords[j] = "";  // 用空字符串占位，避免越界
+                        }
                     }
                     
                     // 使用AVX版本计算MD5
                     __m256i state[4]; // 8个密码的状态向量
                     MD5Hash_AVX(passwords, state);
                 }
+          
 
                 #else
                 // 使用标准MD5计算

@@ -194,6 +194,12 @@ auto start_add_task = system_clock::now();
     
     prefixs.push_back(prefix);
     prefix_lens.push_back(prefix.length());
+    
+#ifdef DEBUG
+    cout << "DEBUG: Added prefix '" << prefix << "' with length " << prefix.length() << endl;
+    cout << "DEBUG: prefixs.size()=" << prefixs.size() << ", prefix_lens.size()=" << prefix_lens.size() << endl;
+#endif
+    
     taskcount++;
     seg_value_count.push_back(seg->ordered_values.size());  
     guesscount += seg->ordered_values.size();
@@ -296,9 +302,22 @@ auto start_before_launch = system_clock::now();
 
     h_tasks.prefixs = all_prefixes.c_str();
     h_tasks.prefix_offsets = new int[prefixs.size() + 1]; // +1 for the end offset
-    h_tasks.prefix_offsets[0] = 0; // 第一个prefix的起始位置是0
+    h_tasks.prefix_offsets[0] = 0; // First prefix starts at position 0
+    
+#ifdef DEBUG
+    cout << "\nDEBUG: Calculating prefix offsets..." << endl;
+    cout << "prefixs.size() = " << prefixs.size() << endl;
+    cout << "prefix_lens.size() = " << prefix_lens.size() << endl;
     for (size_t i = 0; i < prefixs.size(); ++i) {
-        h_tasks.prefix_offsets[i + 1] = h_tasks.prefix_offsets[i] + prefix_lens[i]; // 计算每个prefix的起始位置
+        cout << "  prefixs[" << i << "] = '" << prefixs[i] << "', length = " << prefix_lens[i] << endl;
+    }
+#endif
+    
+    for (size_t i = 0; i < prefixs.size(); ++i) {
+        h_tasks.prefix_offsets[i + 1] = h_tasks.prefix_offsets[i] + prefix_lens[i]; // Calculate start position of each prefix
+#ifdef DEBUG
+        cout << "  prefix_offsets[" << (i+1) << "] = " << h_tasks.prefix_offsets[i] << " + " << prefix_lens[i] << " = " << h_tasks.prefix_offsets[i + 1] << endl;
+#endif
     }
 
 
@@ -467,8 +486,23 @@ time_before_launch += double(duration_before_launch.count()) * microseconds::per
     
 //TODO ，看看每次启用多少线程， 以及尝试二分查找来找 guess对应的task
 #ifdef DEBUG  
-    cout << "启动kernel: blocks=" << blocks << ", threads_per_block=" << threads_per_block << endl;
-    cout << "总线程数: " << blocks * threads_per_block << ", guess数量: " << guesscount << endl;
+    cout << "Launch kernel: blocks=" << blocks << ", threads_per_block=" << threads_per_block << endl;
+    cout << "Total threads: " << blocks * threads_per_block << ", guess count: " << guesscount << endl;
+    
+    // Safety checks before kernel launch
+    cout << "Safety checks before kernel launch:" << endl;
+    cout << "  gpu_data = " << (gpu_data ? "valid" : "NULL") << endl;
+    cout << "  d_tasks = " << (d_tasks ? "valid" : "NULL") << endl;
+    cout << "  d_guess_buffer = " << (d_guess_buffer ? "valid" : "NULL") << endl;
+    cout << "  result_len = " << result_len << endl;
+    
+    // Check if any critical data is missing
+    if (taskcount == 0) {
+        cout << "ERROR: taskcount is 0!" << endl;
+    }
+    if (guesscount == 0) {
+        cout << "ERROR: guesscount is 0!" << endl;
+    }
 #endif
 
 
@@ -477,13 +511,19 @@ auto start_launch = system_clock::now();
 #endif
     generate_guesses_kernel<<<blocks, threads_per_block>>>(gpu_data, d_tasks, d_guess_buffer);
     
-    // 检查kernel启动错误
+    // Check kernel launch error
     CUDA_CHECK(cudaGetLastError());
 
+#ifdef DEBUG
+    cout << "Kernel launched successfully, waiting for completion..." << endl;
+#endif
 
+    //5. Get results from GPU
+    CUDA_CHECK(cudaDeviceSynchronize());// Wait for GPU to complete computation
 
-    //5. 从GPU获取结果
-    CUDA_CHECK(cudaDeviceSynchronize());// 等待gpu 完成计算
+#ifdef DEBUG
+    cout << "Kernel execution completed" << endl;
+#endif
 
 #ifdef TIME_COUNT
 auto end_launch = system_clock::now();

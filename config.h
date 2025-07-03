@@ -5,7 +5,7 @@
 // #define USING_ALIGNED
 
 
-// #define USING_SIMD // 定义宏以启用SIMD MD5计算
+#define USING_SIMD // 定义宏以启用SIMD MD5计算
 
 // #define USING_MPI // 定义宏以启用MPI并行处理
 
