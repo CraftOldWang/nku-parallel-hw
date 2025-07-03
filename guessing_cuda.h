@@ -7,6 +7,30 @@
 
 #include "config.h"
 
+
+#ifdef USING_POOL
+#include "ThreadPool.h"
+#include <mutex>
+
+struct AsyncGpuTask {
+    TaskManager task_manager;  // 直接移动，不用指针
+    vector<string_view> local_guesses;
+    char* gpu_buffer;
+    
+    // 移动构造函数
+    AsyncGpuTask(TaskManager&& tm) 
+        : task_manager(std::move(tm))
+        , gpu_buffer(nullptr) {
+        local_guesses.reserve(task_manager.guesscount);
+    }
+};
+
+void async_gpu_task(AsyncGpuTask* task_data, PriorityQueue& q);
+#endif
+
+
+
+
 // GPU上用于查找的 ordered_values 数据结构
 struct GpuOrderedValuesData{
     char* letter_all_values;// 把各个segment 的ordered_values展平
@@ -40,6 +64,34 @@ struct Taskcontent{
     int guesscount; // 到10_0000了就会丢给核函数去执行
 };
 
+// 独立的映射表管理类（单例模式）
+class SegmentLengthMaps {
+private:
+    static SegmentLengthMaps* instance;
+    unordered_map<int, int> letter_length_to_id;
+    unordered_map<int, int> digit_length_to_id;
+    unordered_map<int, int> symbol_length_to_id;
+    bool initialized = false;
+    
+public:
+    static SegmentLengthMaps* getInstance() {
+        if (instance == nullptr) {
+            instance = new SegmentLengthMaps();
+        }
+        return instance;
+    }
+    
+    void init(PriorityQueue& q);
+    
+    int getLetterID(int length) const { return letter_length_to_id.at(length); }
+    int getDigitID(int length) const { return digit_length_to_id.at(length); }
+    int getSymbolID(int length) const { return symbol_length_to_id.at(length); }
+};
+
+
+
+
+
 class TaskManager{
 public:
     vector<int> seg_types;
@@ -47,42 +99,41 @@ public:
     vector<int> seg_lens;
     vector<string> prefixs;
     vector<int> prefix_lens; // 每个prefix的长度
-
     vector<int> seg_value_count; // 每个seg 有多少 value （其实只会有所谓最后一个seg的， 就是后面一个seg生成相应数量guess）
     int taskcount;
     int guesscount; // 到10_0000了就会丢给核函数去执行
 
     TaskManager(): taskcount(0), guesscount(0){}// vector 自己会调自己的构造..
+    
+    // 移动构造函数
+    TaskManager(TaskManager&& other) noexcept 
+        : seg_types(std::move(other.seg_types))
+        , seg_ids(std::move(other.seg_ids))
+        , seg_lens(std::move(other.seg_lens))
+        , prefixs(std::move(other.prefixs))
+        , prefix_lens(std::move(other.prefix_lens))
+        , seg_value_count(std::move(other.seg_value_count))
+        , taskcount(other.taskcount)
+        , guesscount(other.guesscount) {
+        other.taskcount = 0;
+        other.guesscount = 0;
+    }
+
+    // 禁用拷贝构造和赋值（强制使用移动语义）
+    TaskManager(const TaskManager&) = delete;
+    TaskManager& operator=(const TaskManager&) = delete;
     void add_task(segment* seg, string prefix, PriorityQueue& q);
+
+#ifdef USING_POOL
+    void launch_gpu_kernel(vector<string_view>& guesses, PriorityQueue& q, char*& gpu_buffer_ptr);
+#else
     void launch_gpu_kernel(vector<string_view>& guesses, PriorityQueue& q);
+#endif
     void clean();
     void print();
-    void init_length_maps(PriorityQueue& q);
-
-private:
-    // 添加长度到ID的映射表
-    unordered_map<int, int> letter_length_to_id;
-    unordered_map<int, int> digit_length_to_id;
-    unordered_map<int, int> symbol_length_to_id;
-    bool maps_initialized = false;
 };
 
-// 最后没用上
-// 用二分查找找 taskid 的函数（不一定会用上）
-// __device__ int find_task_id(int guess_id, int* cumulative_offsets, int task_count) {
-//     int left = 0, right = task_count - 1;
-//     while (left <= right) {
-//         int mid = (left + right) / 2;
-//         if (guess_id >= cumulative_offsets[mid] && guess_id < cumulative_offsets[mid + 1]) {
-//             return mid;
-//         } else if (guess_id < cumulative_offsets[mid]) {
-//             right = mid - 1;  
-//         } else {
-//             left = mid + 1;
-//         }
-//     }
-//     return task_count - 1; // 安全返回
-// }
+
 
 // 生成猜测的 kernal 函数 。生成的猜测放到 d_guess_buffer 上
 __global__ void generate_guesses_kernel(

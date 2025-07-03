@@ -26,21 +26,53 @@ mkdir -p build
 
 
 # #TODO 试试 1 10 100 1000 10000 100000 1000000 10000000
-# 遍历三个不同的 batch size
+# # 遍历三个不同的 batch size
+# # 用那个 string_view 的话就一次需要产出 >=100000个 guess
+# for bsize in  100000 1000000 5000000 10000000 ; do
+#     echo "🔧 编译 cuda GPU_BATCH_SIZE=$bsize"
+
+#     nvcc main_cuda_ori.cpp guessing_cuda.cu guessing.cpp train.cpp md5.cpp \
+#         -o build/guess_bs${bsize} \
+#         -std=c++17 \
+#         -O2 \
+#         -arch=sm_75 \
+#         -lcudart \
+#         -DNDEBUG \
+#         -DGUESS_PER_THREAD=1 \
+#         -DGPU_BATCH_SIZE=${bsize} \
+#         --use_fast_math \
+
+#     if [ $? -ne 0 ]; then
+#         echo "❌ 编译失败，跳过 batch size = $bsize"
+#         continue
+#     fi
+
+#     echo "🚀 运行 GPU_BATCH_SIZE=$bsize ， reserve 并 emplace_back"
+#     ./build/guess_bs${bsize} > ./cur_result/result_${bsize}last_ver.txt
+#     echo "✅ 输出保存到 result_${bsize}last_ver.txt"
+# done
+
+
+# avx+ 线程池 + cuda
 # 用那个 string_view 的话就一次需要产出 >=100000个 guess
 for bsize in  100000 1000000 5000000 10000000 ; do
     echo "🔧 编译 cuda GPU_BATCH_SIZE=$bsize"
 
-    nvcc main_cuda_ori.cpp guessing_cuda.cu guessing.cpp train.cpp md5.cpp \
+    nvcc main_cuda_ori.cpp guessing_cuda.cu guessing.cpp train.cpp md5.cpp md5_avx.cpp \
         -o build/guess_bs${bsize} \
         -std=c++17 \
         -O2 \
         -arch=sm_75 \
         -lcudart \
+        -lpthread \
         -DNDEBUG \
         -DGUESS_PER_THREAD=1 \
         -DGPU_BATCH_SIZE=${bsize} \
+        -DUSING_SIMD \
+        -DUSING_POOL \
+        -DTHREAD_NUM=8 \
         --use_fast_math \
+        -Xcompiler "-mavx -mavx2 -mfma -pthread"
 
     if [ $? -ne 0 ]; then
         echo "❌ 编译失败，跳过 batch size = $bsize"
