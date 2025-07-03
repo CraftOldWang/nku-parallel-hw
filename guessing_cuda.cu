@@ -25,7 +25,55 @@ using namespace chrono;
 
 GpuOrderedValuesData* gpu_data = nullptr;
 TaskManager* task_manager = nullptr;
+SegmentLengthMaps* SegmentLengthMaps::instance = nullptr;
+
+// #ifndef USING_POOL
 char* h_guess_buffer = nullptr; // 为了方便在别的地方释放。。。。在用 string_view
+// #endif
+#ifdef USING_POOL
+extern std::vector<char*> pending_gpu_buffers;  // 等待释放的GPU缓冲区指针
+extern mutex main_data_mutex;
+extern mutex gpu_buffer_mutex;
+
+
+void async_gpu_task(AsyncGpuTask* task_data, PriorityQueue& q) {
+    try {
+        // 1. 执行GPU计算（使用移动的TaskManager）
+        task_data->task_manager.launch_gpu_kernel(
+            task_data->local_guesses, 
+            q,
+            task_data->gpu_buffer  // 传递gpu_buffer引用
+        );
+        
+        // 2. 将结果插入主guesses向量（需要加锁）
+        {
+            std::lock_guard<std::mutex> lock1(main_data_mutex);
+            std::lock_guard<std::mutex> lock2(gpu_buffer_mutex);
+            
+            // 插入猜测结果
+            q.guesses.insert(q.guesses.end(), 
+                           task_data->local_guesses.begin(), 
+                           task_data->local_guesses.end());
+            
+            // 将GPU缓冲区指针加入管理列表
+            if (task_data->gpu_buffer != nullptr) {
+                pending_gpu_buffers.push_back(task_data->gpu_buffer);
+            }
+        }
+        
+    } catch (const std::exception& e) {
+        std::cerr << "GPU异步任务错误: " << e.what() << std::endl;
+        // 出错时也要清理GPU缓冲区
+        if (task_data->gpu_buffer != nullptr) {
+            delete[] task_data->gpu_buffer;
+        }
+    }
+    
+    // 清理任务数据
+    delete task_data;
+}
+
+#endif
 
 #ifdef TIME_COUNT
 double time_add_task = 0;
@@ -36,6 +84,8 @@ double time_all_batch = 0;
 double time_string_process = 0;
 double time_memcpy_toh = 0;
 #endif
+
+
 
 
 // GPU设备函数：使用二分查找找到guess_id对应的task
@@ -170,29 +220,30 @@ void TaskManager::add_task(segment* seg, string prefix, PriorityQueue& q) {
 auto start_add_task = system_clock::now();
 #endif
     // 确保映射表已初始化
-    if (!maps_initialized) {
-        init_length_maps(q);
-    }
+    // if (!maps_initialized) {
+    //     init_length_maps(q);
+    // }
+    SegmentLengthMaps* maps = SegmentLengthMaps::getInstance();
     
     seg_types.push_back(seg->type);
     seg_lens.push_back(seg->length);
     
     switch (seg->type) {
     case 1:
-        seg_ids.push_back(letter_length_to_id[seg->length]);
+        seg_ids.push_back(maps->getLetterID(seg->length));
         break;
     case 2:
-        seg_ids.push_back(digit_length_to_id[seg->length]);
+        seg_ids.push_back(maps->getDigitID(seg->length));
         break;
     case 3:
-        seg_ids.push_back(symbol_length_to_id[seg->length]);
+        seg_ids.push_back(maps->getSymbolID(seg->length));
         break;
     default:
         throw "undefined_segment_error";
         break;
     }
     
-    prefixs.push_back(prefix);
+    prefixs.push_back(std::move(prefix));  // 使用移动语义
     prefix_lens.push_back(prefix.length());
     taskcount++;
     seg_value_count.push_back(seg->ordered_values.size());  
@@ -213,9 +264,8 @@ time_add_task += double(duration_add_task.count()) * microseconds::period::num /
 
 }
 
-
-void TaskManager::init_length_maps(PriorityQueue& q) {
-    if (maps_initialized) return;
+void SegmentLengthMaps::init(PriorityQueue& q) {
+    if (initialized) return;
     
     // 构建字母长度映射
     for (int i = 0; i < q.m.letters.size(); i++) {
@@ -241,17 +291,23 @@ void TaskManager::init_length_maps(PriorityQueue& q) {
         }
     }
     
-    maps_initialized = true;
-    
+    initialized = true;
 #ifdef DEBUG
-    cout << "初始化长度映射完成:" << endl;
-    cout << "  字母长度映射: " << letter_length_to_id.size() << " 种长度" << endl;
-    cout << "  数字长度映射: " << digit_length_to_id.size() << " 种长度" << endl;
-    cout << "  符号长度映射: " << symbol_length_to_id.size() << " 种长度" << endl;
+cout << "初始化长度映射完成:" << endl;
+cout << "  字母长度映射: " << letter_length_to_id.size() << " 种长度" << endl;
+cout << "  数字长度映射: " << digit_length_to_id.size() << " 种长度" << endl;
+cout << "  符号长度映射: " << symbol_length_to_id.size() << " 种长度" << endl;
 #endif
 }
 
-void TaskManager::launch_gpu_kernel(vector<string_view>& guesses, PriorityQueue& q){
+
+
+#ifdef USING_POOL
+void TaskManager::launch_gpu_kernel(vector<string_view>& guesses, PriorityQueue& q, char*& gpu_buffer_ptr) 
+#else
+void TaskManager::launch_gpu_kernel(vector<string_view>& guesses, PriorityQueue& q) 
+#endif
+{
 #ifdef TIME_COUNT
 auto start_one_batch = system_clock::now();
 
@@ -577,10 +633,20 @@ time_string_process += double(duration_string_process.count()) * microseconds::p
     d_guess_buffer = nullptr;
     
     // 释放CPU内存
-    // delete[] h_guess_buffer;
     delete[] h_tasks.prefix_offsets;
-    // h_guess_buffer = nullptr;
     h_tasks.prefix_offsets = nullptr;
+
+#ifdef USING_POOL
+    // 将h_guess_buffer的所有权转移给调用者
+    gpu_buffer_ptr = h_guess_buffer;
+    h_guess_buffer = nullptr;  // 防止在clean()中被释放
+#endif
+
+#ifndef USING_POOL
+    // 只有在非线程池模式下才在这里释放h_guess_buffer
+    delete[] h_guess_buffer;
+    h_guess_buffer = nullptr;
+#endif
 
 #ifdef DEBUG
     cout << "GPU内存释放完成" << endl;

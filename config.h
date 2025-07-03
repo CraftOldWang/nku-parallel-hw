@@ -10,6 +10,8 @@
 // #define USING_MPI // 定义宏以启用MPI并行处理
 
 // #define USING_SMALL
+
+// #define USING_POOL
 // #define THREAD_NUM 8 // 线程池的线程数
 
 // 每 10_0000 个guess 拿去给gpu处理一下

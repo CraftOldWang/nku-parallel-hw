@@ -1,12 +1,23 @@
 #include "PCFG.h"
 #include "guessing_cuda.h"
+#include "config.h"
 #include <chrono>
+
+#ifdef USING_POOL
+#include "ThreadPool.h"
+extern ThreadPool* thread_pool;
+extern std::mutex main_data_mutex;
+extern std::mutex gpu_buffer_mutex;
+extern std::vector<char*> pending_gpu_buffers;
+extern void async_gpu_task(AsyncGpuTask* task_data, PriorityQueue& q);
+#endif
+
 using namespace std;
 using namespace chrono;
 
-// #ifdef TIME_COUNT
+#ifdef TIME_COUNT
 double time_gpu_kernel = 0;
-// #endif
+#endif
 
 void PriorityQueue::CalProb(PT &pt)
 {
@@ -239,7 +250,21 @@ auto start_gpu_kernel = system_clock::now();
 
         task_manager->add_task(a, "", *this);
         if(task_manager->guesscount > GPU_BATCH_SIZE){
+#ifdef USING_POOL
+            // 创建异步任务（使用移动语义）
+            AsyncGpuTask* async_task = new AsyncGpuTask(std::move(*task_manager));
+            
+            // 提交到线程池
+            thread_pool->enqueue([async_task, this]() {
+                async_gpu_task(async_task, *this);
+            });
+            
+            // TaskManager已经被移动，重新创建一个新的
+            task_manager = new TaskManager();
+#else
+            // 同步版本：直接添加到guesses
             task_manager->launch_gpu_kernel(guesses, *this);
+#endif
         }
 
 // #ifdef TIME_COUNT
@@ -314,14 +339,28 @@ auto start_gpu_kernel = system_clock::now();
 
         task_manager->add_task(a, guess, *this);
         if(task_manager->guesscount > GPU_BATCH_SIZE){
+#ifdef USING_POOL
+            // 创建异步任务（使用移动语义）
+            AsyncGpuTask* async_task = new AsyncGpuTask(std::move(*task_manager));
+            
+            // 提交到线程池
+            thread_pool->enqueue([async_task, this]() {
+                async_gpu_task(async_task, *this);
+            });
+            
+            // TaskManager已经被移动，重新创建一个新的
+            task_manager = new TaskManager();
+#else
+            // 同步版本：直接添加到guesses
             task_manager->launch_gpu_kernel(guesses, *this);
+#endif
         }
 
-// #ifdef TIME_COUNT
+#ifdef TIME_COUNT
 auto end_gpu_kernel = system_clock::now();
 auto duration_gpu_kernel = duration_cast<microseconds>(end_gpu_kernel - start_gpu_kernel);
 time_gpu_kernel += double(duration_gpu_kernel.count()) * microseconds::period::num / microseconds::period::den;
-// #endif 
+#endif 
 
     }
 }
