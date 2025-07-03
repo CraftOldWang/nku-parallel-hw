@@ -77,4 +77,4 @@ static inline void II_AVX(__m256i& a, __m256i b, __m256i c,
 }
 
 // AVX版本的MD5哈希函数 - 一次处理8个字符串
-void MD5Hash_AVX(string *input, __m256i *state);
+void MD5Hash_AVX(string_view *input, __m256i *state);
