@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <unordered_set>
 #include "guessing_cuda.h"
+#include <string_view>
 
 using namespace std;
 using namespace chrono;
@@ -45,7 +46,10 @@ int main()
 
     
     // 加载一些测试数据
-    unordered_set<std::string> test_set;
+    // 加载测试数据时需要注意生命周期
+    vector<string> test_passwords;  // 用于保存实际的字符串数据
+    unordered_set<std::string_view> test_set;
+
 #ifdef _WIN32
     #ifdef USING_SMALL
     ifstream test_data(".\\guessdata\\small_Rockyou-singleLined-full.txt");
@@ -60,7 +64,8 @@ int main()
     while(test_data>>pw)
     {   
         test_count+=1;
-        test_set.insert(pw);
+        test_passwords.push_back(pw);  // 保存实际数据
+        test_set.insert(test_passwords.back());  // 插入 string_view
         if (test_count>=1000000)
         {
             break;
@@ -104,13 +109,13 @@ int main()
         {
             auto start_hash = system_clock::now();
             bit32 state[4];
-            for (string pw : q.guesses)
+            for (string_view pw : q.guesses)
             {
                 if (test_set.find(pw) != test_set.end()) {
                     cracked+=1;
                 }
                 // TODO：对于SIMD实验，将这里替换成你的SIMD MD5函数
-                MD5Hash(pw, state);
+                // MD5Hash(pw, state);
 
                 // 以下注释部分用于输出猜测和哈希，但是由于自动测试系统不太能写文件，所以这里你可以改成cout
                 // a<<pw<<"\t";
