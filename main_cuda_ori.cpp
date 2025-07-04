@@ -160,7 +160,7 @@ int main()
 #endif
 
 
-
+    q.m.initMapping(q);
     q.m.order();
     // 传输数据到gpu， 但是算在训练时间里？ 每次又不需要重置...
 #ifdef TIME_COUNT
@@ -174,9 +174,7 @@ double time_transfergpu = double(duration_transfergpu.count()) * microseconds::p
 cout << "time transfer gpu :" << time_transfergpu << endl;
 #endif
 
-    // 初始化映射表（只初始化一次，不管是否使用线程池）
-    SegmentLengthMaps::getInstance()->init(q);
-    PTMaps::getInstance()->init(q);
+
     auto end_train = system_clock::now();
     auto duration_train = duration_cast<microseconds>(end_train - start_train);
     double time_train = double(duration_train.count()) * microseconds::period::num / microseconds::period::den;

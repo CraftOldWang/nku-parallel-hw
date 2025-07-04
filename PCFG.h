@@ -10,6 +10,8 @@
 using namespace std;
 
 class PT;
+class SegmentLengthMaps;
+class PTMaps;
 
 
 
@@ -168,6 +170,10 @@ public:
 
     // 对一个给定的口令进行切分
     void parse(string pw);
+
+    // 初始化映射表（只初始化一次，不管是否使用线程池）
+    void initMapping(PriorityQueue& q);
+        
 
     void order();
 

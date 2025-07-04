@@ -2,7 +2,14 @@
 #include <fstream>
 #include <cctype>
 #include <algorithm>
+#include <chrono>
+#include "config.h"
 
+
+// 总之带cuda。。。。
+#include "guessing_cuda.h"
+using namespace std;
+using namespace chrono;
 // 这个文件里面的各函数你都不需要完全理解，甚至根本不需要看
 // 从学术价值上讲，加速模型的训练过程是一个没什么价值的问题，因为我们一般假定统计学模型的训练成本较低
 // 但是，假如你是一个投稿时顶着ddl做实验的倒霉研究生/实习生，提高训练速度就可以大幅节省你的时间了
@@ -18,6 +25,8 @@
  * 
  */
 
+double time_findpt = 0;
+
 // 训练的wrapper，实际上就是读取训练集
 void model::train(string path)
 {
@@ -30,6 +39,10 @@ void model::train(string path)
     int lines = 0;
     cout<<"Training..."<<endl;
     cout<<"Training phase 1: reading and parsing passwords..."<<endl;
+#ifdef TIME_COUNT
+auto start_parse = system_clock::now();
+#endif
+
     while (train_set >> pw)
     {
         lines += 1;
@@ -45,6 +58,14 @@ void model::train(string path)
         // 读取单个口令之后，就可以将其扔进parse函数进行PT/segment的分割、识别、统计了
         parse(pw);
     }
+#ifdef TIME_COUNT
+auto end_parse = system_clock::now();
+auto duration_parse = duration_cast<microseconds>(end_parse - start_parse);
+double time_parse = double(duration_parse.count()) * microseconds::period::num / microseconds::period::den;
+cout << "time parse  :" << time_parse << endl;
+cout << "time findpt: " << time_findpt <<endl;
+#endif
+
 }
 
 /// @brief 在模型中找到一个PT的统计数据
@@ -52,6 +73,11 @@ void model::train(string path)
 /// @return 目标PT在模型中的对应下标
 int model::FindPT(PT pt)
 {
+
+#ifdef TIME_COUNT
+auto start_findpt = system_clock::now();
+#endif
+
     for (int id = 0; id < preterminals.size(); id += 1)
     {
         if (preterminals[id].content.size() != pt.content.size())
@@ -71,10 +97,22 @@ int model::FindPT(PT pt)
             }
             if (equal_flag == true)
             {
+#ifdef TIME_COUNT
+auto end_findpt = system_clock::now();
+auto duration_findpt = duration_cast<microseconds>(end_findpt - start_findpt);
+time_findpt += double(duration_findpt.count()) * microseconds::period::num / microseconds::period::den;
+// cout << "time_findpt cur" << endl;
+#endif
                 return id;
             }
         }
     }
+#ifdef TIME_COUNT
+auto end_findpt = system_clock::now();
+auto duration_findpt = duration_cast<microseconds>(end_findpt - start_findpt);
+time_findpt += double(duration_findpt.count()) * microseconds::period::num / microseconds::period::den;
+// cout << "time_findpt cur" << endl;
+#endif
     return -1;
 }
 
@@ -378,18 +416,21 @@ void model::parse(string pw)
     // cout << FindPT(pt) << endl;
     total_preterm += 1;
     if (FindPT(pt) == -1)
-    {
+    {   
+        // cout << "jweiofjwieo" <<endl;
         for (int i = 0; i < pt.content.size(); i += 1)
         {
             pt.curr_indices.emplace_back(0);
         }
         int id = GetNextPretermID();
         // cout << id << endl;
-        preterminals.emplace_back(pt);
+        preterminals.emplace_back(std::move(pt));
         preterm_freq[id] = 1;
     }
     else
     {
+        // cout << "jweiofjwieo" <<endl;
+
         int id = FindPT(pt);
         // cout << id << endl;
         preterm_freq[id] += 1;
@@ -474,13 +515,20 @@ bool compareByPretermProb(const PT& a, const PT& b) {
     return a.preterm_prob > b.preterm_prob;  // 降序排序
 }
 
+
+void model::initMapping(PriorityQueue& q){
+        SegmentLengthMaps::getInstance()->init(q);
+        PTMaps::getInstance()->init(q);
+}
+
 void model::order()
 {
+    PTMaps*  pt_maps  = PTMaps::getInstance();
     cout << "Training phase 2: Ordering segment values and PTs..." << endl;
     for (PT pt : preterminals)
-    {
-        pt.preterm_prob = float(preterm_freq[FindPT(pt)]) / total_preterm;
-        ordered_pts.emplace_back(pt);
+    { 
+        pt.preterm_prob = float(preterm_freq[pt_maps->getPTID(pt)]) / total_preterm;
+        ordered_pts.emplace_back(std::move(pt));
     }
     bool swapped;
     cout << "total pts" << ordered_pts.size() << endl;
