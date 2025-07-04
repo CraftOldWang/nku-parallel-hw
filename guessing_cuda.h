@@ -75,9 +75,149 @@ public:
     int getLetterID(int length) const { return letter_length_to_id.at(length); }
     int getDigitID(int length) const { return digit_length_to_id.at(length); }
     int getSymbolID(int length) const { return symbol_length_to_id.at(length); }
+    int getID(const segment& seg) const {
+        switch (seg.type)
+        {
+        case 1:
+            return letter_length_to_id.at(seg.length); 
+            break;
+        case 2:
+            return digit_length_to_id.at(seg.length);
+            break;
+        case 3:
+            return symbol_length_to_id.at(seg.length);
+            break;
+        default:
+            throw "undefined_segment_error";
+            break;
+        }
+    }
+    const segment& getSeginPQ(const segment& seg, PriorityQueue & q) const {
+        switch (seg.type)
+        {
+        case 1:
+            return  q.m.letters[getID(seg)]; 
+            break;
+        case 2:
+            return q.m.digits[getID(seg)]; 
+            break;
+        case 3:
+            return q.m.symbols[getID(seg)]; 
+            break;
+        default:
+            throw "undefined_segment_error";
+            break;
+        }
+    }
 };
 
+// PT映射表管理类（单例模式）
+class PTMaps {
+private:
+    static PTMaps* instance;
+    unordered_map<string, int> pt_signature_to_id;  // PT签名到ID的映射
+    bool initialized = false;
+    
+    // 生成PT的唯一签名
+    string generatePTSignature(const PT& pt) const {
+        string signature;
+        for (const auto& seg : pt.content) {
+            signature += to_string(seg.type) + "_" + to_string(seg.length) + "|";
+        }
+        return signature;
+    }
+    
+public:
+    static PTMaps* getInstance() {
+        if (instance == nullptr) {
+            instance = new PTMaps();
+        }
+        return instance;
+    }
+    
+    void init(PriorityQueue& q) {
+        if (initialized) return;
+        
+        // 构建PT签名到索引的映射
+        for (int i = 0; i < q.m.preterminals.size(); i++) {
+            string signature = generatePTSignature(q.m.preterminals[i]);
+            pt_signature_to_id[signature] = i;
+        }
+        
+        initialized = true;
+        
+        #ifdef DEBUG
+        cout << "PTMaps initialized with " << pt_signature_to_id.size() << " PT mappings" << endl;
+        #endif
+    }
+    
+    // 根据PT获取其在模型中的ID
+    int getPTID(const PT& pt) const {
+        string signature = generatePTSignature(pt);
+        auto it = pt_signature_to_id.find(signature);
+        if (it != pt_signature_to_id.end()) {
+            return it->second;
+        }
+        throw std::runtime_error("PT not found in mapping: " + signature);
+    }
+    
+    // 根据PT获取其在模型中的引用
+    const PT& getPTInModel(const PT& pt, PriorityQueue& q) const {
+        int id = getPTID(pt);
+        return q.m.preterminals[id];
+    }
+    
+    // 根据PT获取其在模型中的指针
+    PT* getPTPtr(const PT& pt, PriorityQueue& q) const {
+        int id = getPTID(pt);
+        return &q.m.preterminals[id];
+    }
+    
+    // 获取PT的频率
+    int getPTFreq(const PT& pt, PriorityQueue& q) const {
+        int id = getPTID(pt);
+        auto freq_it = q.m.preterm_freq.find(id);
+        if (freq_it != q.m.preterm_freq.end()) {
+            return freq_it->second;
+        }
+        return 0;
+    }
+    
+    // 获取PT的概率
+    float getPTProb(const PT& pt, PriorityQueue& q) const {
+        int freq = getPTFreq(pt, q);
+        return static_cast<float>(freq) / q.m.total_preterm;
+    }
+    
+    // 检查PT是否存在于模型中
+    bool containsPT(const PT& pt) const {
+        string signature = generatePTSignature(pt);
+        return pt_signature_to_id.find(signature) != pt_signature_to_id.end();
+    }
+    
+    // 获取映射表大小
+    size_t size() const {
+        return pt_signature_to_id.size();
+    }
+    
+    // 清理资源
+    void cleanup() {
+        pt_signature_to_id.clear();
+        initialized = false;
+    }
+    
+    // 调试：打印所有映射
+    void printMappings() const {
+        cout << "=== PT Mappings ===" << endl;
+        for (const auto& pair : pt_signature_to_id) {
+            cout << "Signature: " << pair.first << " -> ID: " << pair.second << endl;
+        }
+        cout << "===================" << endl;
+    }
+};
 
+// 静态成员定义（需要在.cu文件中）
+// PTMaps* PTMaps::instance = nullptr;
 
 
 
@@ -111,7 +251,7 @@ public:
     // 禁用拷贝构造和赋值（强制使用移动语义）
     TaskManager(const TaskManager&) = delete;
     TaskManager& operator=(const TaskManager&) = delete;
-    void add_task(segment* seg, string& prefix, PriorityQueue& q);
+    void add_task(const segment* seg, string& prefix, PriorityQueue& q);
 
     // 统一函数签名，都接受外部缓冲区指针
     void launch_gpu_kernel(vector<string_view>& guesses, PriorityQueue& q, char*& h_guess_buffer);

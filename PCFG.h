@@ -25,7 +25,7 @@ public:
     };
 
     // 打印相关信息
-    void PrintSeg();
+    void PrintSeg() const; 
 
     // 按照概率降序排列的value。例如，123是D3的一个具体value，其概率在D3的所有value中排名第三，那么其位置就是ordered_values[2]
     vector<string> ordered_values;
@@ -48,6 +48,7 @@ public:
     void PrintValues();
 };
 
+class PriorityQueue;
 class PT
 {
 public:
@@ -60,14 +61,14 @@ public:
     void PrintPT();
 
     // 导出新的PT
-    vector<PT> NewPTs();
+    vector<PT> NewPTs(PriorityQueue & q) const;
 
     // 记录当前每个segment（除了最后一个）对应的value，在模型中的下标
     vector<int> curr_indices;
 
     //BUGFIX 貌似这个max_indices, 也包含最后一个的
     // 记录当前每个segment（除了最后一个）对应的value，在模型中的最大下标（即最大可以是max_indices[x]-1）
-    vector<int> max_indices;
+    // vector<int> max_indices;
     // void init();
     float preterm_prob;
     float prob;

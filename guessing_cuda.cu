@@ -27,6 +27,7 @@ using namespace chrono;
 GpuOrderedValuesData* gpu_data = nullptr;
 TaskManager* task_manager = nullptr;
 SegmentLengthMaps* SegmentLengthMaps::instance = nullptr;
+PTMaps* PTMaps::instance = nullptr;
 
 // 统一的缓冲区管理（无论是否使用线程池）
 extern std::vector<char*> pending_gpu_buffers;  // 等待释放的GPU缓冲区指针
@@ -216,7 +217,7 @@ __global__ void generate_guesses_kernel(
 }
 
 
-void TaskManager::add_task(segment* seg, string& prefix, PriorityQueue& q) {
+void TaskManager::add_task(const segment* seg, string& prefix, PriorityQueue& q) {
 
 #ifdef TIME_COUNT
 auto start_add_task = system_clock::now();
@@ -229,7 +230,7 @@ auto start_add_task = system_clock::now();
     
     seg_types.push_back(seg->type);
     seg_lens.push_back(seg->length);
-    
+    const segment & seginmodel = maps->getSeginPQ(*seg, q); 
     switch (seg->type) {
     case 1:
         seg_ids.push_back(maps->getLetterID(seg->length));
@@ -250,12 +251,12 @@ auto start_add_task = system_clock::now();
     prefixs.emplace_back(std::move(prefix));  // 使用移动语义
 
     taskcount++;
-    seg_value_count.push_back(seg->ordered_values.size());  
-    guesscount += seg->ordered_values.size();
+    seg_value_count.push_back(seginmodel.ordered_values.size());  
+    guesscount += seginmodel.ordered_values.size();
 
 #ifdef DEBUG
     cout << "Added task: ";
-    seg->PrintSeg();
+    seginmodel.PrintSeg();
     cout << " -> ID: " << seg_ids.back() << endl;
 #endif
 

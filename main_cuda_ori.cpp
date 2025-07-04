@@ -176,6 +176,7 @@ cout << "time transfer gpu :" << time_transfergpu << endl;
 
     // 初始化映射表（只初始化一次，不管是否使用线程池）
     SegmentLengthMaps::getInstance()->init(q);
+    PTMaps::getInstance()->init(q);
     auto end_train = system_clock::now();
     auto duration_train = duration_cast<microseconds>(end_train - start_train);
     double time_train = double(duration_train.count()) * microseconds::period::num / microseconds::period::den;
@@ -238,13 +239,13 @@ auto start_pop_next = system_clock::now();
 #endif
 
 #ifdef DEBUG
-cout <<"1"<<endl;
+// cout <<"1"<<endl;
 #endif
             q.PopNext();
 
 
 #ifdef DEBUG
-cout <<" 2" <<endl;
+// cout <<" 2" <<endl;
 
 #endif
 #ifdef TIME_COUNT

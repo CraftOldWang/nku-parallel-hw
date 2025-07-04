@@ -205,6 +205,8 @@ int main()
     cout << "DEBUG: 开始初始化映射表" << endl;
 #endif
     SegmentLengthMaps::getInstance()->init(q);
+    PTMaps::getInstance()->init(q);
+
 #ifdef DEBUG
     cout << "DEBUG: 映射表初始化完成" << endl;
 #endif

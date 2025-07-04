@@ -396,7 +396,7 @@ void model::parse(string pw)
     }
 }
 
-void segment::PrintSeg()
+void segment::PrintSeg() const
 {
     if (type == 1)
     {
