@@ -111,7 +111,7 @@ public:
     // 禁用拷贝构造和赋值（强制使用移动语义）
     TaskManager(const TaskManager&) = delete;
     TaskManager& operator=(const TaskManager&) = delete;
-    void add_task(segment* seg, string prefix, PriorityQueue& q);
+    void add_task(segment* seg, string& prefix, PriorityQueue& q);
 
     // 统一函数签名，都接受外部缓冲区指针
     void launch_gpu_kernel(vector<string_view>& guesses, PriorityQueue& q, char*& h_guess_buffer);

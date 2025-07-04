@@ -401,6 +401,7 @@ cout << "time_all_batch: " << time_all_batch << " seconds" << endl <<endl;
             abort();
         }
         pending_task_count = 0;
+#ifdef TIME_COUNT
         time_pop_next = 0;
         time_popnext_non_generate = 0;  // 新增
         time_calprob = 0;  // 新增
@@ -412,6 +413,7 @@ cout << "time_all_batch: " << time_all_batch << " seconds" << endl <<endl;
         time_string_process = 0;
         time_memcpy_toh = 0;
         time_all_batch = 0;
+#endif
         cout << "实验 #" << (exp_idx + 1) << " 完成，线程池已清理" << endl;
 #endif
     }

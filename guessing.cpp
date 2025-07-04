@@ -121,7 +121,7 @@ void PriorityQueue::init()
 void PriorityQueue::PopNext()
 {
 #ifdef TIME_COUNT
-    auto start_popnext_non_generate = system_clock::now();
+    auto start_popnext = system_clock::now();
 #endif
     // 对优先队列最前面的PT，首先利用这个PT生成一系列猜测
     auto front_iter = priority.begin();
@@ -283,8 +283,8 @@ void PriorityQueue::Generate(PT pt)
 #ifdef TIME_COUNT
 auto start_gpu_kernel = system_clock::now();
 #endif
-
-        task_manager->add_task(a, "", *this);
+        string temp = "";
+        task_manager->add_task(a, temp, *this);
         if(task_manager->guesscount > GPU_BATCH_SIZE){
 #ifdef USING_POOL
             // 创建异步任务（使用移动语义）

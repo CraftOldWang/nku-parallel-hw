@@ -11,7 +11,7 @@
 
 // #define USING_SMALL
 
-// #define USING_POOL
+#define USING_POOL
 // #define THREAD_NUM 8 // 线程池的线程数
 
 // CUDA GPU parameters
@@ -24,5 +24,5 @@
 // 看看batch 在 10_0000  100_0000 1000_0000 有什么区别。 （guess time 会变吗）
 // #define DEBUG
 
-// #define TIME_COUNT
+#define TIME_COUNT
 #endif

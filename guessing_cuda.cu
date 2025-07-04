@@ -216,7 +216,7 @@ __global__ void generate_guesses_kernel(
 }
 
 
-void TaskManager::add_task(segment* seg, string prefix, PriorityQueue& q) {
+void TaskManager::add_task(segment* seg, string& prefix, PriorityQueue& q) {
 
 #ifdef TIME_COUNT
 auto start_add_task = system_clock::now();
@@ -246,7 +246,9 @@ auto start_add_task = system_clock::now();
     }
 
     prefix_lens.push_back(prefix.length());
-    prefixs.push_back(prefix);  // 先别使用移动语义
+    // prefixs.push_back(prefix);  // 先别使用移动语义
+    prefixs.emplace_back(std::move(prefix));  // 使用移动语义
+
     taskcount++;
     seg_value_count.push_back(seg->ordered_values.size());  
     guesscount += seg->ordered_values.size();
