@@ -3,12 +3,14 @@
 #include "config.h"
 #include <chrono>
 
+// 统一的缓冲区管理（无论是否使用线程池）
+extern std::mutex gpu_buffer_mutex;
+extern std::vector<char*> pending_gpu_buffers;
+
 #ifdef USING_POOL
 #include "ThreadPool.h"
 extern std::unique_ptr<ThreadPool> thread_pool;
 extern std::mutex main_data_mutex;
-extern std::mutex gpu_buffer_mutex;
-extern std::vector<char*> pending_gpu_buffers;
 extern void async_gpu_task(AsyncGpuTask* task_data, PriorityQueue& q);
 #endif
 
@@ -17,6 +19,8 @@ using namespace chrono;
 
 #ifdef TIME_COUNT
 double time_gpu_kernel = 0;
+double time_popnext_non_generate = 0;  // 新增：PopNext中非Generate部分的时间
+double time_calprob = 0;  // 新增：CalProb函数的时间
 #endif
 
 void PriorityQueue::CalProb(PT &pt)
@@ -109,51 +113,76 @@ void PriorityQueue::init()
         // 计算当前pt的概率
         CalProb(pt);
         // 将PT放入优先队列
-        priority.emplace_back(pt);
+        priority.insert(pt);
     }
     // cout << "priority size:" << priority.size() << endl;
 }
 
 void PriorityQueue::PopNext()
 {
-
+#ifdef TIME_COUNT
+    auto start_popnext_non_generate = system_clock::now();
+#endif
     // 对优先队列最前面的PT，首先利用这个PT生成一系列猜测
-    Generate(priority.front());
+    auto front_iter = priority.begin();
+    Generate(*front_iter);
 
+#ifdef TIME_COUNT
+    auto end_generate = system_clock::now();
+    auto start_new_pts = system_clock::now();
+#endif
     // 然后需要根据即将出队的PT，生成一系列新的PT
-    vector<PT> new_pts = priority.front().NewPTs();
+    PT copy_pt = *front_iter;
+    vector<PT> new_pts = (copy_pt).NewPTs();
     for (PT pt : new_pts)
     {
+#ifdef TIME_COUNT
+    auto start_calprob = system_clock::now();
+#endif
         // 计算概率
         CalProb(pt);
-        // 接下来的这个循环，作用是根据概率，将新的PT插入到优先队列中
-        for (auto iter = priority.begin(); iter != priority.end(); iter++)
-        {
-            // 对于非队首和队尾的特殊情况
-            if (iter != priority.end() - 1 && iter != priority.begin())
-            {
-                // 判定概率
-                if (pt.prob <= iter->prob && pt.prob > (iter + 1)->prob)
-                {
-                    priority.emplace(iter + 1, pt);
-                    break;
-                }
-            }
-            if (iter == priority.end() - 1)
-            {
-                priority.emplace_back(pt);
-                break;
-            }
-            if (iter == priority.begin() && iter->prob < pt.prob)
-            {
-                priority.emplace(iter, pt);
-                break;
-            }
-        }
+#ifdef TIME_COUNT
+    auto end_calprob = system_clock::now();
+    auto duration_calprob = duration_cast<microseconds>(end_calprob - start_calprob);
+    time_calprob += double(duration_calprob.count()) * microseconds::period::num / microseconds::period::den;
+#endif
+
+        priority.insert(pt);
+
+        // // 接下来的这个循环，作用是根据概率，将新的PT插入到优先队列中
+        // for (auto iter = priority.begin(); iter != priority.end(); iter++)
+        // {
+        //     // 对于非队首和队尾的特殊情况
+        //     if (iter != priority.end() - 1 && iter != priority.begin())
+        //     {
+        //         // 判定概率
+        //         if (pt.prob <= iter->prob && pt.prob > (iter + 1)->prob)
+        //         {
+        //             priority.emplace(iter + 1, pt);
+        //             break;
+        //         }
+        //     }
+        //     if (iter == priority.end() - 1)
+        //     {
+        //         priority.emplace_back(pt);
+        //         break;
+        //     }
+        //     if (iter == priority.begin() && iter->prob < pt.prob)
+        //     {
+        //         priority.emplace(iter, pt);
+        //         break;
+        //     }
+        // }
     }
 
     // 现在队首的PT善后工作已经结束，将其出队（删除）
-    priority.erase(priority.begin());
+    priority.erase(front_iter);
+
+#ifdef TIME_COUNT
+    auto end_new_pts = system_clock::now();
+    auto duration_new_pts = duration_cast<microseconds>(end_new_pts - start_new_pts);
+    time_popnext_non_generate += double(duration_new_pts.count()) * microseconds::period::num / microseconds::period::den;
+#endif
 }
 
 // 这个函数你就算看不懂，对并行算法的实现影响也不大
@@ -207,8 +236,15 @@ vector<PT> PT::NewPTs()
 void PriorityQueue::Generate(PT pt)
 {
     // 计算PT的概率，这里主要是给PT的概率进行初始化
+#ifdef TIME_COUNT
+    auto start_calprob = system_clock::now();
+#endif
     CalProb(pt);
-    
+#ifdef TIME_COUNT
+    auto end_calprob = system_clock::now();
+    auto duration_calprob = duration_cast<microseconds>(end_calprob - start_calprob);
+    time_calprob += double(duration_calprob.count()) * microseconds::period::num / microseconds::period::den;
+#endif
     // 对于只有一个segment的PT，直接遍历生成其中的所有value即可
     if (pt.content.size() == 1)
     {
@@ -262,8 +298,16 @@ auto start_gpu_kernel = system_clock::now();
             // TaskManager已经被移动，重新创建一个新的
             task_manager = new TaskManager();
 #else
-            // 同步版本：直接添加到guesses
-            task_manager->launch_gpu_kernel(guesses, *this);
+            // 同步版本：预分配缓冲区，然后调用GPU kernel
+            char* h_guess_buffer = nullptr;
+            task_manager->launch_gpu_kernel(guesses, *this, h_guess_buffer);
+            // 将缓冲区指针添加到管理列表（统一管理）
+            {
+                std::lock_guard<std::mutex> lock(gpu_buffer_mutex);
+                pending_gpu_buffers.push_back(h_guess_buffer);
+            }
+            
+            
 #endif
         }
 
@@ -340,6 +384,9 @@ auto start_gpu_kernel = system_clock::now();
         task_manager->add_task(a, guess, *this);
         if(task_manager->guesscount > GPU_BATCH_SIZE){
 #ifdef USING_POOL
+            int current_pending = pending_task_count.load();  // 原子读取
+            cout << current_pending << endl;
+            pending_task_count++;
             // 创建异步任务（使用移动语义）
             AsyncGpuTask* async_task = new AsyncGpuTask(std::move(*task_manager));
             
@@ -351,8 +398,14 @@ auto start_gpu_kernel = system_clock::now();
             // TaskManager已经被移动，重新创建一个新的
             task_manager = new TaskManager();
 #else
-            // 同步版本：直接添加到guesses
-            task_manager->launch_gpu_kernel(guesses, *this);
+            // 同步版本：预分配缓冲区，然后调用GPU kernel
+            char* h_guess_buffer = nullptr;
+            task_manager->launch_gpu_kernel(guesses, *this, h_guess_buffer);
+            // 将缓冲区指针添加到管理列表（统一管理）
+            {
+                std::lock_guard<std::mutex> lock(gpu_buffer_mutex);
+                pending_gpu_buffers.push_back(h_guess_buffer);
+            }
 #endif
         }
 

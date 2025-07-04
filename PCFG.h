@@ -3,10 +3,15 @@
 #include <iostream>
 #include <unordered_map>
 #include <queue>
+#include <set>
 // #include <omp.h>
 // #include <chrono>   
 // using namespace chrono;
 using namespace std;
+
+class PT;
+
+
 
 class segment
 {
@@ -66,6 +71,38 @@ public:
     // void init();
     float preterm_prob;
     float prob;
+};
+
+// 为啥单拿一个结构体出来，不能直接用函数？ 传到 multiset的模板参数。。。
+struct PTComparator {
+    bool operator()(const PT& a, const PT& b) const {
+        // 首先按概率降序
+        if (a.prob != b.prob) {
+            return a.prob > b.prob;
+        }
+        
+        // 概率相同时，按pivot升序
+        if (a.pivot != b.pivot) {
+            return a.pivot < b.pivot;
+        }
+        
+        // pivot也相同时，按content大小升序
+        if (a.content.size() != b.content.size()) {
+            return a.content.size() < b.content.size();
+        }
+        
+        // 最后按content的具体内容比较
+        for (size_t i = 0; i < a.content.size(); i++) {
+            if (a.content[i].type != b.content[i].type) {
+                return a.content[i].type < b.content[i].type;
+            }
+            if (a.content[i].length != b.content[i].length) {
+                return a.content[i].length < b.content[i].length;
+            }
+        }
+        
+        return false;  // 完全相同的情况 
+    }
 };
 
 class model
@@ -143,7 +180,9 @@ class PriorityQueue
 {
 public:
     // 用vector实现的priority queue
-    vector<PT> priority;
+    // vector<PT> priority;
+    // 改用multiset实现的priority queue
+    multiset<PT, PTComparator> priority;
 
     // 模型作为成员，辅助猜测生成
     model m;

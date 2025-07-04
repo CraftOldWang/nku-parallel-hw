@@ -11,6 +11,8 @@
 #ifdef USING_POOL
 #include "ThreadPool.h"
 #include <mutex>
+#include <atomic>
+extern std::atomic<int> pending_task_count;  // 未完成的异步任务数量
 #endif
 
 
@@ -111,11 +113,10 @@ public:
     TaskManager& operator=(const TaskManager&) = delete;
     void add_task(segment* seg, string prefix, PriorityQueue& q);
 
-#ifdef USING_POOL
-    void launch_gpu_kernel(vector<string_view>& guesses, PriorityQueue& q, char*& gpu_buffer_ptr);
-#else
-    void launch_gpu_kernel(vector<string_view>& guesses, PriorityQueue& q);
-#endif
+    // 统一函数签名，都接受外部缓冲区指针
+    void launch_gpu_kernel(vector<string_view>& guesses, PriorityQueue& q, char*& h_guess_buffer);
+    
+    // 计算所需的缓冲区大小
     void clean();
     void print();
 };

@@ -41,11 +41,11 @@ void MD5Hash_AVX(string_view *input, __m256i *state)
     
     // 4. 主处理循环 - 逐块处理消息
     for (int i = 0; i < max_blocks; i++) {
-        __m256i x[16]; // 16个消息块，每个包含8个并行处理的值
+        alignas(32) __m256i x[16]; // 16个消息块，每个包含8个并行处理的值
         
         // 4.1 加载当前块
         for (int j = 0; j < 16; j++) {
-            bit32 values[8] = {0}; // 默认填0
+            alignas(32) bit32 values[8] = {0}; // 默认填0
             
             for (int k = 0; k < 8; k++) {
                 if (i < blockCounts[k]) {

@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <string_view>
+#include <mutex>
 #include "guessing_cuda.h"  // 包含头文件
 #include "config.h"
 #include <chrono>
@@ -27,15 +28,12 @@ GpuOrderedValuesData* gpu_data = nullptr;
 TaskManager* task_manager = nullptr;
 SegmentLengthMaps* SegmentLengthMaps::instance = nullptr;
 
-// #ifndef USING_POOL
-char* h_guess_buffer = nullptr; // 为了方便在别的地方释放。。。。在用 string_view
-// #endif
-#ifdef USING_POOL
+// 统一的缓冲区管理（无论是否使用线程池）
 extern std::vector<char*> pending_gpu_buffers;  // 等待释放的GPU缓冲区指针
 extern mutex main_data_mutex;
 extern mutex gpu_buffer_mutex;
 
-
+#ifdef USING_POOL
 void async_gpu_task(AsyncGpuTask* task_data, PriorityQueue& q) {
     try {
         // 1. 执行GPU计算（使用移动的TaskManager）
@@ -69,6 +67,10 @@ void async_gpu_task(AsyncGpuTask* task_data, PriorityQueue& q) {
         }
     }
     
+    // 3. 任务完成，减少计数
+    pending_task_count--;  // 原子操作，线程安全
+
+
     // Clean up task data
     delete task_data;
 }
@@ -242,9 +244,9 @@ auto start_add_task = system_clock::now();
         throw "undefined_segment_error";
         break;
     }
-    
-    prefixs.push_back(std::move(prefix));  // 使用移动语义
+
     prefix_lens.push_back(prefix.length());
+    prefixs.push_back(prefix);  // 先别使用移动语义
     taskcount++;
     seg_value_count.push_back(seg->ordered_values.size());  
     guesscount += seg->ordered_values.size();
@@ -302,11 +304,8 @@ cout << "  Symbol length mappings: " << symbol_length_to_id.size() << " types" <
 
 
 
-#ifdef USING_POOL
-void TaskManager::launch_gpu_kernel(vector<string_view>& guesses, PriorityQueue& q, char*& gpu_buffer_ptr) 
-#else
-void TaskManager::launch_gpu_kernel(vector<string_view>& guesses, PriorityQueue& q) 
-#endif
+// 统一函数签名，都接受外部缓冲区指针
+void TaskManager::launch_gpu_kernel(vector<string_view>& guesses, PriorityQueue& q, char*& h_guess_buffer)
 {
 #ifdef TIME_COUNT
 auto start_one_batch = system_clock::now();
@@ -354,6 +353,8 @@ auto start_before_launch = system_clock::now();
     h_tasks.prefix_offsets = new int[prefixs.size() + 1]; // +1 for the end offset
     h_tasks.prefix_offsets[0] = 0; // 第一个prefix的起始位置是0
     for (size_t i = 0; i < prefixs.size(); ++i) {
+        // cout << "h_tasks.prefix_offsets[" << i  << "]=" << h_tasks.prefix_offsets[i] 
+        // << "prefix_lens[" << i<<"]=" << prefix_lens[i] << endl;
         h_tasks.prefix_offsets[i + 1] = h_tasks.prefix_offsets[i] + prefix_lens[i]; // 计算每个prefix的起始位置
     }
 
@@ -419,7 +420,7 @@ auto start_before_launch = system_clock::now();
 #endif
 
 
-    // 1.999. 分配cpu 部分的内存 （结果 buffer ）
+    // 1.999. Allocate local host buffer for this call (thread-safe)
     h_guess_buffer = new char[result_len]; // host端的guess_buffer (结果 buffer)
 
 
@@ -531,8 +532,12 @@ time_before_launch += double(duration_before_launch.count()) * microseconds::per
 #ifdef TIME_COUNT
 auto start_launch = system_clock::now();
 #endif
+
+// cout << "launch kernel" <<endl;
+
     generate_guesses_kernel<<<blocks, threads_per_block>>>(gpu_data, d_tasks, d_guess_buffer);
-    
+
+// cout <<"end launch kernel" <<endl;
     // 检查kernel启动错误
     CUDA_CHECK(cudaGetLastError());
 
@@ -541,6 +546,7 @@ auto start_launch = system_clock::now();
     //5. 从GPU获取结果
     CUDA_CHECK(cudaDeviceSynchronize());// 等待gpu 完成计算
 
+// cout <<"gpu compute complete" <<endl;
 #ifdef TIME_COUNT
 auto end_launch = system_clock::now();
 auto duration_launch = duration_cast<microseconds>(end_launch - start_launch);
@@ -553,8 +559,11 @@ auto start_after_launch = system_clock::now();
 #ifdef TIME_COUNT
 auto start_memcpy_toh = system_clock::now();
 #endif
+
+// cout <<"start copy gpu to cpu" <<endl;
     CUDA_CHECK(cudaMemcpy(h_guess_buffer, d_guess_buffer, result_len * sizeof(char), cudaMemcpyDeviceToHost));
 
+// cout <<"mem copy end" <<endl;
 #ifdef TIME_COUNT
 auto end_memcpy_toh = system_clock::now();
 auto duration_memcpy_toh = duration_cast<microseconds>(end_memcpy_toh - start_memcpy_toh);
@@ -636,20 +645,10 @@ time_string_process += double(duration_string_process.count()) * microseconds::p
     delete[] h_tasks.prefix_offsets;
     h_tasks.prefix_offsets = nullptr;
 
-#ifdef USING_POOL
-    // Transfer ownership of h_guess_buffer to caller
-    gpu_buffer_ptr = h_guess_buffer;
-    h_guess_buffer = nullptr;  // Prevent release in clean()
-#endif
-
-#ifndef USING_POOL
-    // Only release h_guess_buffer here in non-thread pool mode
-    delete[] h_guess_buffer;
-    h_guess_buffer = nullptr;
-#endif
+    // 注意：h_guess_buffer 由外部管理，不在这里释放
 
 #ifdef DEBUG
-    cout << "GPU memory release completed" << endl;
+    cout << "GPU memory release completed, h_guess_buffer managed externally" << endl;
 #endif
 
 
@@ -850,28 +849,28 @@ void init_gpu_ordered_values_data(GpuOrderedValuesData*& d_gpu_data,PriorityQueu
 
     // Copy data of each pointer to GPU
 #ifdef DEBUG
-    printf("total_letter_length: %zu\n", total_letter_length);
-    printf("total_digit_length: %zu\n", total_digit_length);
-    printf("total_symbol_length: %zu\n", total_symbol_length);
-    printf("letter_offsetarr_length: %zu\n", letter_offsetarr_length);
-    printf("digit_offsetarr_length: %zu\n", digit_offsetarr_length);
-    printf("symbol_offsetarr_length: %zu\n", symbol_offsetarr_length);
+    // printf("total_letter_length: %zu\n", total_letter_length);
+    // printf("total_digit_length: %zu\n", total_digit_length);
+    // printf("total_symbol_length: %zu\n", total_symbol_length);
+    // printf("letter_offsetarr_length: %zu\n", letter_offsetarr_length);
+    // printf("digit_offsetarr_length: %zu\n", digit_offsetarr_length);
+    // printf("symbol_offsetarr_length: %zu\n", symbol_offsetarr_length);
 
-    //TODO Maybe we can print the lengths in q.m. to see if there are any problems.
+    // //TODO Maybe we can print the lengths in q.m. to see if there are any problems.
 
-    // Check if the first ten letters have problems.
-    for(int i=0;i<10;i++){
-        segment& seg = q.m.letters[i];  
-        seg.PrintSeg();
-        seg.PrintValues();
-        // for(int j = 0; j < seg.ordered_values.size(); j++) {
-        //     string letter_value(h_gpu_data.letter_all_values + 
-        //         h_gpu_data.letter_value_offsets[h_gpu_data.letter_seg_offsets[i]] + 
-        //         j * seg.length, seg.length );
-        //     cout << letter_value << " ";
-        // }
-        cout << endl <<endl;
-    }
+    // // Check if the first ten letters have problems.
+    // for(int i=0;i<10;i++){
+    //     segment& seg = q.m.letters[i];  
+    //     seg.PrintSeg();
+    //     seg.PrintValues();
+    //     // for(int j = 0; j < seg.ordered_values.size(); j++) {
+    //     //     string letter_value(h_gpu_data.letter_all_values + 
+    //     //         h_gpu_data.letter_value_offsets[h_gpu_data.letter_seg_offsets[i]] + 
+    //     //         j * seg.length, seg.length );
+    //     //     cout << letter_value << " ";
+    //     // }
+    //     cout << endl <<endl;
+    // }
 
     // The other two can also be checked in a similar way for problems.
 #endif
