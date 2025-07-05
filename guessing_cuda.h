@@ -22,6 +22,15 @@ extern std::unique_ptr<ThreadPool> thread_pool;
 extern PriorityQueue q;
 
 
+#define CUDA_CHECK(call) \
+    do { \
+        cudaError_t err__ = (call); \
+        if (err__ != cudaSuccess) { \
+            fprintf(stderr, "\033[1;31m[CUDA ERROR]\033[0m %s:%d: %s (%d)\n", \
+                __FILE__, __LINE__, cudaGetErrorString(err__), err__); \
+            exit(EXIT_FAILURE); \
+        } \
+    } while (0)
 
 
 
@@ -337,6 +346,82 @@ void merge_results_stage(AsyncGpuPipeline::AsyncTaskData& data);
 // 清理函数
 void cleanup_stage(AsyncGpuPipeline::AsyncTaskData& data);
 void synchronous_cleanup(AsyncGpuPipeline::AsyncTaskData& data);
+
+
+
+
+
+
+// 🔥 GPU任务的不同阶段
+enum class GpuTaskStage {
+    PREPARE_DATA,    // 准备数据并拷贝到GPU
+    LAUNCH_KERNEL,   // 启动GPU kernel
+    COPY_RESULTS,    // 拷贝结果回CPU
+    PROCESS_STRINGS, // 处理字符串
+    MERGE_RESULTS    // 合并到全局队列
+};
+
+// 🔥 GPU任务数据结构（包含状态）
+struct StagedGpuTask {
+    TaskManager task_manager;
+    vector<string_view> local_guesses;
+    char* gpu_buffer = nullptr;
+    
+    // 🔥 当前阶段和状态
+    GpuTaskStage current_stage = GpuTaskStage::PREPARE_DATA;
+    bool has_error = false;
+
+    // ⚠️ 添加：保证数据生命周期  阶段间的数据
+    std::string all_prefixes;           // 保存连接的前缀字符串
+    std::vector<int> res_offset;        // 保存结果偏移量
+    std::vector<int> cumulative_offsets; // 保存累积偏移量
+    size_t result_len = 0;
+
+    // CUDA资源
+    cudaStream_t compute_stream = nullptr;
+    
+    // GPU内存指针（用于分阶段释放）
+    char* temp_prefixs = nullptr;
+    int* d_seg_types = nullptr;
+    int* d_seg_ids = nullptr;
+    int* d_seg_lens = nullptr;
+    int* d_prefix_offsets = nullptr;
+    int* d_prefix_lens = nullptr;
+    int* d_seg_value_counts = nullptr;
+    int* d_cumulative_guess_offsets = nullptr;
+    int* d_output_offsets = nullptr;
+    Taskcontent* d_tasks = nullptr;
+    char* d_guess_buffer = nullptr;
+    
+    // CPU内存指针
+    int* h_prefix_offsets = nullptr;
+
+    StagedGpuTask(TaskManager&& tm) : task_manager(std::move(tm)) {
+        // 创建CUDA流
+        CUDA_CHECK(cudaStreamCreate(&compute_stream));
+    }
+    
+    ~StagedGpuTask() {
+        if (compute_stream) {
+            cudaStreamDestroy(compute_stream);
+        }
+    }
+    void cleanup_gpu_resources();
+
+};
+
+// 🔥 分阶段GPU任务处理函数
+void process_staged_gpu_task(StagedGpuTask* task, PriorityQueue& q);
+
+// 🔥 各个阶段的函数声明
+void stage_prepare_data(StagedGpuTask* task, PriorityQueue& q);
+void stage_launch_kernel(StagedGpuTask* task, PriorityQueue& q);
+void stage_copy_results(StagedGpuTask* task, PriorityQueue& q);
+void stage_process_strings(StagedGpuTask* task, PriorityQueue& q);
+void stage_merge_results(StagedGpuTask* task, PriorityQueue& q);
+void cleanup_staged_task(StagedGpuTask* task);
+
+
 
 
 

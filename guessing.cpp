@@ -22,7 +22,7 @@ double time_popnext_non_generate = 0;  // 新增：PopNext中非Generate部分�
 double time_calprob = 0;  // 新增：CalProb函数的时间
 #endif
 // 添加最大任务数限制
-const int MAX_PENDING_TASKS = 4;  // 限制最多4个异步任务
+const int MAX_PENDING_TASKS = 8;  // 限制最多4个异步任务
 void check_and_perform_hash();
 void perform_hash_calculation(PriorityQueue& q, double& time_hash);
 void PriorityQueue::CalProb(PT &pt)
@@ -206,49 +206,23 @@ void PriorityQueue::Generate(PT pt)
     // 3. 如果达到一定量，以及一些要求， 就提交任务。
     if(task_manager->guesscount > GPU_BATCH_SIZE){
         // 🔥 关键：检查是否达到任务数限制
-        if (thread_pool->pending_tasks() >= MAX_PENDING_TASKS) {
-#ifdef DEBUG
-            printf("[DEBUG] ⚠️ Max pending tasks (%d) reached, waiting... (current: %zu)\n", 
-                   MAX_PENDING_TASKS, thread_pool->pending_tasks());
-#endif
-
-                // 等待当前任务完成
-                wait_for_pending_tasks();
-            }
-            
-            // 创建异步任务数据 (移动语义 把 task_manager 搬走)
-            auto* async_task = new AsyncGpuTask(std::move(*task_manager));
-            
-            // 同步的任务
-            thread_pool->enqueue([async_task, this](){
-                try {
-                    sync_gpu_task(async_task, *this);  // 调用同步版本
-                } catch (...) {
-                    std::cerr << "Sync GPU task exception\n";
-                }
-            });
-
-//             // 提交到线程池
-//             thread_pool->enqueue([async_task, this](){// 不过这样做好像还是不能实际反应线程池任务数量。
-//                 async_gpu_task(async_task, *this);
-
-// #ifdef TASK_COUNT
-//                 pending_task_count--;    
-//                 int cur_task = pending_task_count.load();
-//                 cout << "now -1 has  " << cur_task << " tasks\n";
-// #endif
-//             });
-// #ifdef TASK_COUNT
-//             pending_task_count++;
-//             int cur_task = pending_task_count.load();
-//             cout << "now +1 has  " << cur_task << " tasks\n";
-// #endif
-
-            // TaskManager已经被移动，重新创建一个新的
-            task_manager = new TaskManager();
-
-            // std::this_thread::sleep_for(std::chrono::seconds(1000)); // 睡 1000 秒
+        while (thread_pool->pending_tasks() >= MAX_PENDING_TASKS) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }
+
+        // 🔥 创建分阶段任务
+        auto* staged_task = new StagedGpuTask(std::move(*task_manager));
+
+        // 🔥 提交第一阶段到线程池
+        thread_pool->enqueue([staged_task, this](){
+            process_staged_gpu_task(staged_task, *this);
+        });
+
+
+        task_manager = new TaskManager();
+
+        // std::this_thread::sleep_for(std::chrono::seconds(1000)); // 睡 1000 秒
+    }
 
 
     

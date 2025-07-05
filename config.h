@@ -17,22 +17,22 @@
 // #define THREAD_NUM 8 // 线程池的线程数
 
 // CUDA GPU parameters
-// #ifndef GUESS_PER_THREAD
-// #define GUESS_PER_THREAD 8  // Default value if not defined at compile time
-// #endif
+#ifndef GUESS_PER_THREAD
+#define GUESS_PER_THREAD 8  // Default value if not defined at compile time
+#endif
 
 // 每 10_0000 个guess 拿去给gpu处理一下
-// #ifndef GPU_BATCH_SIZE
-// #define GPU_BATCH_SIZE 100000
-// #endif
+#ifndef GPU_BATCH_SIZE
+#define GPU_BATCH_SIZE 100000
+#endif
 // 看看batch 在 10_0000  100_0000 1000_0000 有什么区别。 （guess time 会变吗）
-#define DEBUG
+// #define DEBUG
 // 编译命令
 // chcp 65001 && & "D:\Softwares\Git\bin\bash.exe" "run_cuda.sh"
 
 // #define TIME_COUNT
 // #define TASK_COUNT
 // #define COUNT_PENDING_GPU_BUFFER
-#define THREAD_POOL_DEBUG
+// #define THREAD_POOL_DEBUG
 
 #endif
