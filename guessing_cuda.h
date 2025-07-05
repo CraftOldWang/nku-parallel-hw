@@ -277,6 +277,7 @@ struct AsyncGpuTask {
 };
 
 void async_gpu_task(AsyncGpuTask* task_data, PriorityQueue& q);
+void sync_gpu_task(AsyncGpuTask* task_data, PriorityQueue& q);
 
 
 
@@ -294,7 +295,7 @@ public:
         std::string all_prefixes;           // 保存连接的前缀字符串
         std::vector<int> res_offset;        // 保存结果偏移量
         std::vector<int> cumulative_offsets; // 保存累积偏移量
-        
+        Taskcontent task_content;
         // ⚠️ 添加：错误状态管理
         std::atomic<bool> has_error{false};
 
@@ -326,30 +327,16 @@ public:
     };
 public:
     static void launch_async_pipeline(TaskManager tm, PriorityQueue& q);
-    
-public:
-
-
-
-
-    
-
-    
-    // CUDA回调函数
-    static void CUDART_CB memory_copy_completion_callback(cudaStream_t stream, cudaError_t status, void* userData);
-    static void CUDART_CB async_cleanup_completion_callback(cudaStream_t stream, cudaError_t status, void* userData);
-
-
 };
 // 流水线阶段函数
 void prepare_gpu_data_stage(AsyncGpuPipeline::AsyncTaskData& data);
 void launch_kernel_stage(AsyncGpuPipeline::AsyncTaskData& data);
-void start_memory_copy_stage(AsyncGpuPipeline::AsyncTaskData& data);
+void submit_memory_copy_task(AsyncGpuPipeline::AsyncTaskData* data, PriorityQueue& q);
 void process_strings_stage(AsyncGpuPipeline::AsyncTaskData& data);
 void merge_results_stage(AsyncGpuPipeline::AsyncTaskData& data);
 // 清理函数
 void cleanup_stage(AsyncGpuPipeline::AsyncTaskData& data);
-void asynchronous_cleanup(AsyncGpuPipeline::AsyncTaskData& data);
+void synchronous_cleanup(AsyncGpuPipeline::AsyncTaskData& data);
 
 
 

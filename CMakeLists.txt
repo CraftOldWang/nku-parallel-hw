@@ -15,25 +15,27 @@ find_package(CUDAToolkit REQUIRED)
 
 # 源码文件列表
 set(SOURCES
-    ${CMAKE_SOURCE_DIR}/correctness_guess.cpp
-    ${CMAKE_SOURCE_DIR}/guessing.cpp
+    ${CMAKE_SOURCE_DIR}/main_cuda_ori.cpp
     ${CMAKE_SOURCE_DIR}/guessing_cuda.cu
+    ${CMAKE_SOURCE_DIR}/async_gpu_pipeline.cu
+    ${CMAKE_SOURCE_DIR}/guessing.cpp
     ${CMAKE_SOURCE_DIR}/train.cpp
     ${CMAKE_SOURCE_DIR}/md5.cpp
     ${CMAKE_SOURCE_DIR}/md5_avx.cpp
 )
 
-# 支持外部传入参数，设置默认值（可通过 -D 参数覆盖）
-set(BATCH_SIZE 1000000 CACHE STRING "GPU batch size")
-set(GUESS_PER_THREAD 4 CACHE STRING "Guesses per thread")
-set(THREAD_NUM 8 CACHE STRING "Thread number")
+# 固定参数
+set(BATCH_SIZE 500000)
+set(GUESS_PER_THREAD 2)
+set(THREAD_NUM 20)
 
-# 目标名称带参数区分
+# 目标名
 set(TARGET_NAME guess_bs${BATCH_SIZE}_gpt${GUESS_PER_THREAD}_trn${THREAD_NUM})
 
+# 添加可执行文件
 add_executable(${TARGET_NAME} ${SOURCES})
 
-# 定义宏
+# 宏定义
 target_compile_definitions(${TARGET_NAME} PRIVATE
     GPU_BATCH_SIZE=${BATCH_SIZE}
     GUESS_PER_THREAD=${GUESS_PER_THREAD}
@@ -43,6 +45,7 @@ target_compile_definitions(${TARGET_NAME} PRIVATE
     NDEBUG
 )
 
+# 包含 CUDA 的头文件
 target_include_directories(${TARGET_NAME} PRIVATE
     ${CUDAToolkit_INCLUDE_DIRS}
 )
@@ -55,7 +58,7 @@ target_compile_options(${TARGET_NAME} PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:/EHsc>
 )
 
-# CUDA 属性
+# CUDA 设置
 set_target_properties(${TARGET_NAME} PROPERTIES
     CUDA_ARCHITECTURES 89
     CUDA_SEPARABLE_COMPILATION ON

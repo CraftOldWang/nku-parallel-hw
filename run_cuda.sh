@@ -32,11 +32,11 @@ mkdir -p ./cur_result_all/seetime
 # 100000 1000000 5000000 10000000
 CL_PATH="D:\Softwares\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.41.34120\bin\Hostx64\x64\cl.exe"
 # for bsize in  100000 500000 1000000 5000000 10000000 ; do
-for bsize in 1000000 ; do
+for bsize in 500000 ; do
     # for gptread in 1 4 16 64 ; do
-    for gptread in  4 ; do
+    for gptread in  2 ; do
         # for threadnum in 2 8 32; do
-        for threadnum in  16 ; do
+        for threadnum in  20 ; do
 
             echo "🔧 编译 cuda GPU_BATCH_SIZE=$bsize , guess per thread ${gptread} , thread num ${threadnum}"
 

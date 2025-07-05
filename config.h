@@ -26,9 +26,13 @@
 // #define GPU_BATCH_SIZE 100000
 // #endif
 // 看看batch 在 10_0000  100_0000 1000_0000 有什么区别。 （guess time 会变吗）
-// #define DEBUG
+#define DEBUG
 // 编译命令
 // chcp 65001 && & "D:\Softwares\Git\bin\bash.exe" "run_cuda.sh"
 
-#define TIME_COUNT
+// #define TIME_COUNT
+// #define TASK_COUNT
+// #define COUNT_PENDING_GPU_BUFFER
+#define THREAD_POOL_DEBUG
+
 #endif

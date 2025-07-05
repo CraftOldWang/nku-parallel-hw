@@ -42,9 +42,8 @@ void async_gpu_task(AsyncGpuTask* task_data, PriorityQueue& q) {
 #ifdef DEBUG
         printf("[DEBUG] 🎯 async_gpu_task: Launching async pipeline...\n");
 #endif
-        pending_task_count++;
-        int cur_task = pending_task_count.load();
-        cout << "now +1 has  " << cur_task << " tasks\n";
+
+
         AsyncGpuPipeline::launch_async_pipeline(std::move(task_data->task_manager), q);
 #ifdef DEBUG
     printf("[DEBUG] 🎯 async_gpu_task: Pipeline launched successfully\n");
@@ -62,9 +61,7 @@ void async_gpu_task(AsyncGpuTask* task_data, PriorityQueue& q) {
     // 清理AsyncGpuTask
     // task_data里面的task_manager 已经被拿走了， 故释放
     delete task_data;
-    pending_task_count--;
-    int cur_task = pending_task_count.load();
-    cout << "now -1 has  " << cur_task << " tasks\n";
+
 
 #ifdef DEBUG
     printf("[DEBUG] 🎯 async_gpu_task: Task data cleaned up\n");
@@ -218,29 +215,19 @@ void TaskManager::add_task(const segment* seg, string& prefix, PriorityQueue& q)
 #ifdef TIME_COUNT
 auto start_add_task = system_clock::now();
 #endif
-    // 确保映射表已初始化
-    // if (!maps_initialized) {
-    //     init_length_maps(q);
-    // }
+    // 获得映射表
     SegmentLengthMaps* maps = SegmentLengthMaps::getInstance();
-    
+#ifdef DEBUG
+    if (seg == nullptr) {
+        cout << "what the fuck ?" << endl;
+        std::this_thread::sleep_for(std::chrono::seconds(10000)); // 睡 1000 秒
+
+    }
+#endif
     seg_types.push_back(seg->type);
     seg_lens.push_back(seg->length);
     const segment & seginmodel = maps->getSeginPQ(*seg, q); 
-    switch (seg->type) {
-    case 1:
-        seg_ids.push_back(maps->getLetterID(seg->length));
-        break;
-    case 2:
-        seg_ids.push_back(maps->getDigitID(seg->length));
-        break;
-    case 3:
-        seg_ids.push_back(maps->getSymbolID(seg->length));
-        break;
-    default:
-        throw "undefined_segment_error";
-        break;
-    }
+    seg_ids.push_back(maps->getID(*seg));
 
     prefix_lens.push_back(prefix.length());
     // prefixs.push_back(prefix);  // 先别使用移动语义
@@ -299,290 +286,6 @@ cout << "  Letter length mappings: " << letter_length_to_id.size() << " types" <
 cout << "  Digit length mappings: " << digit_length_to_id.size() << " types" << endl;
 cout << "  Symbol length mappings: " << symbol_length_to_id.size() << " types" << endl;
 #endif
-}
-
-
-
-// 统一函数签名，都接受外部缓冲区指针
-void TaskManager::launch_gpu_kernel(vector<string_view>& guesses, PriorityQueue& q, char*& h_guess_buffer)
-{
-#ifdef TIME_COUNT
-auto start_one_batch = system_clock::now();
-
-
-auto start_before_launch = system_clock::now();
-#endif
-
-    //1. 准备数据
-    Taskcontent h_tasks; 
-    Taskcontent temp; // 为了中转一下 gpu的地址...(h_tasks里是cpu的)
-    
-    Taskcontent* d_tasks;
-    char* d_guess_buffer;
-    size_t result_len = 0; // 结果数组的长度
-    vector<int> res_offset;// 结果char* 中， 每个seg对应的一坨guess的开始offset。 
-
-#ifdef DEBUG
-    cout << "=== TaskManager::launch_gpu_kernel Debug Info ===" << endl;
-    cout << "Task count: " << taskcount << endl;
-    cout << "Expected guess count: " << guesscount << endl;
-    cout << "Segment info:" << endl;
-    for (int i = 0; i < taskcount; i++) {
-        cout << "  Task " << i << ": type=" << seg_types[i] 
-             << ", id=" << seg_ids[i] 
-             << ", len=" << seg_lens[i] 
-             << ", value_count=" << seg_value_count[i] 
-             << ", prefix='" << prefixs[i] << "' (len=" << prefix_lens[i] << ")" << endl;
-    }
-#endif
-
-
-    h_tasks.seg_types = seg_types.data();
-    h_tasks.seg_ids = seg_ids.data();
-    string all_prefixes = std::accumulate(prefixs.begin(), prefixs.end(), std::string(""));
-
-
-#ifdef DEBUG
-    cout << "\nConcatenated prefixes: '" << all_prefixes << "'" << endl;
-    cout << "Concatenated prefixes length: " << all_prefixes.length() << endl;
-#endif
-
-
-    h_tasks.prefixs = all_prefixes.c_str();
-    h_tasks.prefix_offsets = new int[prefixs.size() + 1]; // +1 for the end offset
-    h_tasks.prefix_offsets[0] = 0; // 第一个prefix的起始位置是0
-    for (size_t i = 0; i < prefixs.size(); ++i) {
-        // cout << "h_tasks.prefix_offsets[" << i  << "]=" << h_tasks.prefix_offsets[i] 
-        // << "prefix_lens[" << i<<"]=" << prefix_lens[i] << endl;
-        h_tasks.prefix_offsets[i + 1] = h_tasks.prefix_offsets[i] + prefix_lens[i]; // 计算每个prefix的起始位置
-    }
-
-
-#ifdef DEBUG
-    cout << "\nPrefix offset info:" << endl;
-    for (size_t i = 0; i <= prefixs.size(); i++) {
-        cout << "  prefix_offsets[" << i << "] = " << h_tasks.prefix_offsets[i] << endl;
-    }
-    
-    cout << "\nVerify prefix extraction:" << endl;
-    for (size_t i = 0; i < prefixs.size(); i++) {
-        int start = h_tasks.prefix_offsets[i];
-        int len = prefix_lens[i];
-        string extracted_prefix(all_prefixes.substr(start, len));
-        cout << "  Task " << i << ": original='" << prefixs[i] 
-             << "', extracted='" << extracted_prefix << "'" 
-             << " " << (prefixs[i] == extracted_prefix ? "RIGHT" : "WRONG") << endl;
-    }
-#endif
-
-    h_tasks.prefix_lens = prefix_lens.data();
-    h_tasks.taskcount = taskcount;
-    h_tasks.guesscount = guesscount;
-    h_tasks.seg_lens  = seg_lens.data();
-    h_tasks.seg_value_counts = seg_value_count.data(); // 每个segment的value数量
-    
-    // 合并计算：同时得到 gpu_buffer 数组的长度和累积guess偏移数组
-    vector<int> cumulative_offsets(taskcount + 1, 0);
-    for(int i = 0; i < taskcount; i++){
-        res_offset.push_back(result_len);
-        result_len += seg_value_count[i]*(seg_lens[i] + prefix_lens[i]);
-        cumulative_offsets[i + 1] = cumulative_offsets[i] + seg_value_count[i];
-    }
-    h_tasks.output_offsets = res_offset.data(); // 这样的话，就没有存最末尾的。只有taskcount个
-    h_tasks.cumulative_guess_offsets = cumulative_offsets.data();
-
-
-
-
-    // 1.999. Allocate local host buffer for this call (thread-safe)
-    h_guess_buffer = new char[result_len]; // host端的guess_buffer (结果 buffer)
-
-
-
-    //2. 分配gpu 内存 以及 
-    //3.copy
-    // mem_allocate_and_copy(tasks);
-    //分配gpu内存
-    char* temp_prefixs;
-    CUDA_CHECK(cudaMalloc(&temp_prefixs, h_tasks.prefix_offsets[prefixs.size()] * sizeof(char)));
-    CUDA_CHECK(cudaMalloc(&temp.seg_types, taskcount * sizeof(int)));
-    CUDA_CHECK(cudaMalloc(&temp.seg_ids, taskcount * sizeof(int)));
-    CUDA_CHECK(cudaMalloc(&temp.seg_lens, seg_lens.size() * sizeof(int)));
-    CUDA_CHECK(cudaMalloc(&temp.prefix_offsets, (prefixs.size() + 1 ) * sizeof(int))); // +1 for the end offset
-    CUDA_CHECK(cudaMalloc(&temp.prefix_lens, prefix_lens.size() * sizeof(int)));
-    CUDA_CHECK(cudaMalloc(&temp.seg_value_counts, seg_value_count.size() * sizeof(int)));
-    CUDA_CHECK(cudaMalloc(&temp.cumulative_guess_offsets, (taskcount + 1) * sizeof(int))); // 累积偏移数组
-    CUDA_CHECK(cudaMalloc(&temp.output_offsets, (taskcount + 1) * sizeof(int)));
-    CUDA_CHECK(cudaMalloc(&d_tasks, sizeof(Taskcontent)));
-
-
-    // 分配结果guess_buffer (gpu上)
-    CUDA_CHECK(cudaMalloc(&d_guess_buffer, result_len * sizeof(char)));
-
-    //进行copy
-    CUDA_CHECK(cudaMemcpy(temp.seg_types, h_tasks.seg_types, taskcount * sizeof(int), cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(temp.seg_ids, h_tasks.seg_ids, taskcount * sizeof(int), cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(temp.seg_lens, h_tasks.seg_lens, seg_lens.size() * sizeof(int), cudaMemcpyHostToDevice));
-
-    CUDA_CHECK(cudaMemcpy(temp_prefixs, h_tasks.prefixs,  h_tasks.prefix_offsets[prefixs.size()] * sizeof(char), cudaMemcpyHostToDevice));
-    temp.prefixs = temp_prefixs; // 直接指向gpu的地址
-    
-    // 最后一个偏移量。。。指的是prefixs的结尾 + 1 的下标，也就是总长度
-    CUDA_CHECK(cudaMemcpy(temp.prefix_offsets, h_tasks.prefix_offsets, (prefixs.size() + 1 ) * sizeof(int), cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(temp.prefix_lens, h_tasks.prefix_lens, prefixs.size() * sizeof(int), cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(temp.seg_value_counts, h_tasks.seg_value_counts, seg_value_count.size() *sizeof(int), cudaMemcpyHostToDevice)); 
-    CUDA_CHECK(cudaMemcpy(temp.cumulative_guess_offsets, h_tasks.cumulative_guess_offsets, (taskcount + 1) * sizeof(int), cudaMemcpyHostToDevice)); // 复制累积偏移数组
-    CUDA_CHECK(cudaMemcpy(temp.output_offsets, h_tasks.output_offsets,  (taskcount + 1) * sizeof(int), cudaMemcpyHostToDevice)); 
-
-
-    //int 直接赋值到 temp里 再copy到gpu ，应该可以
-    temp.taskcount = taskcount;
-    temp.guesscount = guesscount;
-
-    CUDA_CHECK(cudaMemcpy(d_tasks, &temp, sizeof(Taskcontent), cudaMemcpyHostToDevice));
-    
-#ifdef TIME_COUNT
-auto end_before_launch = system_clock::now();
-auto duration_before_launch = duration_cast<microseconds>(end_before_launch - start_before_launch);
-time_before_launch += double(duration_before_launch.count()) * microseconds::period::num / microseconds::period::den;
-
-
-
-#endif
-    
-
-    //4. 启动kernal 开始计算
-    //TODO 看一下到底能启用多少thread？ 这里不很清楚该怎么处理
-    int total_threads_needed = (guesscount + GUESS_PER_THREAD - 1) / GUESS_PER_THREAD;
-    int threads_per_block = 1024;
-    int blocks = (total_threads_needed + threads_per_block - 1) / threads_per_block;
-    
-//TODO ，看看每次启用多少线程， 以及尝试二分查找来找 guess对应的task
-
-
-#ifdef TIME_COUNT
-auto start_launch = system_clock::now();
-#endif
-
-// cout << "launch kernel" <<endl;
-
-    generate_guesses_kernel<<<blocks, threads_per_block>>>(gpu_data, d_tasks, d_guess_buffer);
-
-// cout <<"end launch kernel" <<endl;
-    // 检查kernel启动错误
-    CUDA_CHECK(cudaGetLastError());
-
-
-
-    //5. 从GPU获取结果
-    CUDA_CHECK(cudaDeviceSynchronize());// 等待gpu 完成计算
-
-// cout <<"gpu compute complete" <<endl;
-#ifdef TIME_COUNT
-auto end_launch = system_clock::now();
-auto duration_launch = duration_cast<microseconds>(end_launch - start_launch);
-time_launch_task += double(duration_launch.count()) * microseconds::period::num / microseconds::period::den;
-
-// 完成计算到填好
-auto start_after_launch = system_clock::now();
-#endif
-
-#ifdef TIME_COUNT
-auto start_memcpy_toh = system_clock::now();
-#endif
-
-// cout <<"start copy gpu to cpu" <<endl;
-    CUDA_CHECK(cudaMemcpy(h_guess_buffer, d_guess_buffer, result_len * sizeof(char), cudaMemcpyDeviceToHost));
-
-// cout <<"mem copy end" <<endl;
-#ifdef TIME_COUNT
-auto end_memcpy_toh = system_clock::now();
-auto duration_memcpy_toh = duration_cast<microseconds>(end_memcpy_toh - start_memcpy_toh);
-time_memcpy_toh += double(duration_memcpy_toh.count()) * microseconds::period::num / microseconds::period::den;
-#endif
-
-    //6. 将结果填入guesses
-#ifdef TIME_COUNT
-auto start_string_process = system_clock::now();
-#endif
-    //BUG 由于想用string_view ，然后char*指针想在外面释放，所以为了简便，每次生成完都要hash然后把
-    // 相应指针释放了， 不然会出事。 所以每个gpu batch 的长度要大于100000
-    // 由于每个 seg 对应的 guess 们的长度是一样的， 所以这么搞
-    // for(int i = 0; i < seg_ids.size(); i++) {
-    //     for(int j = 0; j < seg_value_count[i]; j++) {
-    //         int start_offset = res_offset[i] + j*(seg_lens[i] + prefix_lens[i]);
-    //         string guess(h_guess_buffer + start_offset, h_guess_buffer + start_offset + seg_lens[i] + prefix_lens[i]);
-    //         guesses.push_back(guess);
-    //     }
-    // }
-
-    guesses.reserve(guesscount);
-    for (int i = 0; i < seg_ids.size(); i++) {
-        for (int j = 0; j < seg_value_count[i]; j++) {
-            int start_offset = res_offset[i] + j * (seg_lens[i] + prefix_lens[i]);
-            std::string_view guess(
-                h_guess_buffer + start_offset,
-                seg_lens[i] + prefix_lens[i]
-            );
-            guesses.emplace_back(
-                h_guess_buffer + start_offset,
-                seg_lens[i] + prefix_lens[i]
-            );
-        }
-    }
-
-
-#ifdef TIME_COUNT
-auto end_string_process = system_clock::now();
-auto duration_string_process = duration_cast<microseconds>(end_string_process - start_string_process);
-time_string_process += double(duration_string_process.count()) * microseconds::period::num / microseconds::period::den;
-#endif
-
-
-
-    //7. Release memory
-#ifdef DEBUG
-    cout << "Starting to release GPU memory..." << endl;
-#endif
-
-    // 释放GPU内存
-    CUDA_CHECK(cudaFree(temp_prefixs));
-    CUDA_CHECK(cudaFree(temp.seg_types));
-    CUDA_CHECK(cudaFree(temp.seg_ids));
-    CUDA_CHECK(cudaFree(temp.seg_lens));
-    CUDA_CHECK(cudaFree(temp.prefix_offsets));
-    CUDA_CHECK(cudaFree(temp.prefix_lens));
-    CUDA_CHECK(cudaFree(temp.seg_value_counts));
-    CUDA_CHECK(cudaFree(temp.cumulative_guess_offsets)); // 释放累积偏移数组
-    CUDA_CHECK(cudaFree(temp.output_offsets));
-    CUDA_CHECK(cudaFree(d_tasks));
-    CUDA_CHECK(cudaFree(d_guess_buffer));
-    
-    // Set pointers to null to avoid dangling pointers
-    temp_prefixs = nullptr;
-    temp.seg_types = nullptr;
-    temp.seg_ids = nullptr;
-    temp.seg_lens = nullptr;
-    temp.prefix_offsets = nullptr;
-    temp.prefix_lens = nullptr;
-    temp.seg_value_counts = nullptr;
-    temp.cumulative_guess_offsets = nullptr; // Set cumulative offset array pointer to null
-    temp.prefixs = nullptr;
-    temp.output_offsets = nullptr;
-    d_tasks = nullptr;
-    d_guess_buffer = nullptr;
-    
-    // Release CPU memory
-    delete[] h_tasks.prefix_offsets;
-    h_tasks.prefix_offsets = nullptr;
-
-    // 注意：h_guess_buffer 由外部管理，不在这里释放
-
-
-
-    //8. Clean TaskManager
-    clean();
-
 }
 
 

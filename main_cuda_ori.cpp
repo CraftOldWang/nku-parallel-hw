@@ -32,7 +32,8 @@ void perform_hash_calculation(PriorityQueue& q, double& time_hash);
 void check_and_perform_hash() {
     int current_guess_count;
     {
-        std::lock_guard<std::mutex> lock(main_data_mutex);
+        // std::lock_guard<std::mutex> lock(main_data_mutex);
+        std::scoped_lock lock(main_data_mutex, gpu_buffer_mutex);
         current_guess_count = q.guesses.size();
     }
     
@@ -43,9 +44,9 @@ void check_and_perform_hash() {
         
         cout << " here to hash in main" << endl;
         {
-            std::lock_guard<std::mutex> lock1(main_data_mutex);
-            std::lock_guard<std::mutex> lock2(gpu_buffer_mutex);
-            
+            // std::lock_guard<std::mutex> lock1(main_data_mutex);
+            // std::lock_guard<std::mutex> lock2(gpu_buffer_mutex);
+            std::scoped_lock lock(main_data_mutex, gpu_buffer_mutex);
             perform_hash_calculation(q, time_hash);
             
             cout << "hash end in main" << endl;
@@ -251,7 +252,9 @@ time_pop_next += double(duration_pop_next.count()) * microseconds::period::num /
 #endif
             int check_guess_count;
             {
-                std::lock_guard<std::mutex> lock(main_data_mutex);
+                // std::lock_guard<std::mutex> lock(main_data_mutex);
+                std::scoped_lock lock(main_data_mutex, gpu_buffer_mutex);
+
                 check_guess_count = q.guesses.size();
             }
 
@@ -292,7 +295,9 @@ cout << "time_all_batch: " << time_all_batch << " seconds" << endl <<endl;
             int current_guess_count;
             {
                 // cout << " here to look guesses count " <<endl;
-                std::lock_guard<std::mutex> lock(main_data_mutex);
+                // std::lock_guard<std::mutex> lock(main_data_mutex);
+                std::scoped_lock lock(main_data_mutex, gpu_buffer_mutex);
+
                 current_guess_count = q.guesses.size();
                 // cout << current_guess_count << endl;
             }
@@ -303,9 +308,10 @@ cout << "time_all_batch: " << time_all_batch << " seconds" << endl <<endl;
                 // 执行哈希计算和缓冲区清理
                 {
                     // cout << " here to hash" << endl;
-                    std::lock_guard<std::mutex> lock1(main_data_mutex);
-                    std::lock_guard<std::mutex> lock2(gpu_buffer_mutex);
-                    
+                    // std::lock_guard<std::mutex> lock1(main_data_mutex);
+                    // std::lock_guard<std::mutex> lock2(gpu_buffer_mutex);
+                    std::scoped_lock lock(main_data_mutex, gpu_buffer_mutex);
+
                     perform_hash_calculation(q, time_hash);
                     
                     // cout <<"hash end" << endl;
@@ -313,7 +319,9 @@ cout << "time_all_batch: " << time_all_batch << " seconds" << endl <<endl;
                     for (char* buffer : pending_gpu_buffers) {
                         delete[] buffer;
                     }
-                    cout << "pendfing_gpu_buffer_size" << pending_gpu_buffers.size()<<endl;
+#ifdef COUNT_PENDING_GPU_BUFFER
+                    cout << "one hash ,pendfing_gpu_buffer_size : " << pending_gpu_buffers.size()<<endl;
+#endif
                     pending_gpu_buffers.clear();
                     
                     // 更新历史记录并清空guesses
@@ -325,9 +333,10 @@ cout << "time_all_batch: " << time_all_batch << " seconds" << endl <<endl;
 
         // 最后的哈希计算（处理剩余的guesses）
         {
-            std::lock_guard<std::mutex> lock1(main_data_mutex);
-            std::lock_guard<std::mutex> lock2(gpu_buffer_mutex);
-            
+            // std::lock_guard<std::mutex> lock1(main_data_mutex);
+            // std::lock_guard<std::mutex> lock2(gpu_buffer_mutex);
+            std::scoped_lock lock(main_data_mutex, gpu_buffer_mutex);
+
             if (!q.guesses.empty()) {
                 perform_hash_calculation(q, time_hash);
                 history += q.guesses.size();
@@ -337,26 +346,55 @@ cout << "time_all_batch: " << time_all_batch << " seconds" << endl <<endl;
             for (char* buffer : pending_gpu_buffers) {
                 delete[] buffer;
             }
+#ifdef COUNT_PENDING_GPU_BUFFER
+                    cout << "after one exp pendfing_gpu_buffer_size : " << pending_gpu_buffers.size()<<endl;
+#endif
             pending_gpu_buffers.clear();
         }
-        // 清理TaskManager
-        task_manager->clean();
+        try {
+
+            // 清理TaskManager
+            delete task_manager;
         
-        // 每轮实验结束后，等待线程池所有任务完成并清理
-        cout << "等待线程池任务完成..." << endl;
+            // 每轮实验结束后，等待线程池所有任务完成并清理
+            cout << "等待线程池任务完成..." << endl;
 #ifdef TIME_COUNT
 auto start_clear_time = system_clock::now();
 #endif
+
+#ifdef TIME_COUNT
+auto start_reset_pool = system_clock::now();
+#endif
         try {
-            std::this_thread::sleep_for(std::chrono::seconds(10)); // 睡 1000 秒
+
+            // std::this_thread::sleep_for(std::chrono::seconds(10)); // 睡 1000 秒
             // 按照 main_pool.cpp 的方式清理并重建线程池
             thread_pool.reset();  // 销毁当前线程池，等待所有任务完成
             thread_pool = make_unique<ThreadPool>(THREAD_NUM);  // 重新创建
+
+
+
+
+        } catch (const std::exception& e) {
+            cerr << "销毁线程池失败: " << e.what() << endl;
+            abort();
+        } catch (...) {
+            cout << "[销毁线程池 ERROR]  failed with unknown exception" <<endl;
+        }
             
+#ifdef TIME_COUNT
+auto end_reset_pool = system_clock::now();
+auto duration_reset_pool = duration_cast<microseconds>(end_reset_pool - start_reset_pool);
+double time_reset_pool = double(duration_reset_pool.count()) * microseconds::period::num / microseconds::period::den;
+
+cout << "time_reset_pool :" << time_reset_pool  << endl;
+#endif
             // 确保在安全状态下清空相关向量
             {
-                std::lock_guard<std::mutex> lock1(main_data_mutex);
-                std::lock_guard<std::mutex> lock2(gpu_buffer_mutex);
+                // std::lock_guard<std::mutex> lock1(main_data_mutex);
+                // std::lock_guard<std::mutex> lock2(gpu_buffer_mutex);
+                std::scoped_lock lock(main_data_mutex, gpu_buffer_mutex);
+
                 q.guesses.clear();
                 
                 // 清理任何剩余的GPU缓冲区

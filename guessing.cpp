@@ -22,7 +22,7 @@ double time_popnext_non_generate = 0;  // 新增：PopNext中非Generate部分�
 double time_calprob = 0;  // 新增：CalProb函数的时间
 #endif
 // 添加最大任务数限制
-const int MAX_PENDING_TASKS = 10;  // 限制最多4个异步任务
+const int MAX_PENDING_TASKS = 4;  // 限制最多4个异步任务
 void check_and_perform_hash();
 void perform_hash_calculation(PriorityQueue& q, double& time_hash);
 void PriorityQueue::CalProb(PT &pt)
@@ -35,17 +35,17 @@ void PriorityQueue::CalProb(PT &pt)
     // 计算一个PT本身的概率。后续所有具体segment value的概率，直接累乘在这个初始概率值上
     pt.prob = pt.preterm_prob;
 
-    // index: 标注当前segment在PT中的位置
     // 遍历所有已实例化的segment，累乘其概率
     SegmentLengthMaps* maps = SegmentLengthMaps::getInstance();
 
-    int index = 0;
-    for (int idx : pt.curr_indices)
-    {
-        const segment & cur_seg = maps->getSeginPQ(pt.content[index] ,*this);
-        pt.prob *= cur_seg.ordered_freqs[idx];
+    for (int i = 0; i < pt.curr_indices.size(); i++) {
+        // 🔥 确保不会超出范围，且不处理最后一个segment
+        // if (i >= pt.content.size() - 1) {
+        //     break;  // 安全退出
+        // }
+        const segment & cur_seg = maps->getSeginPQ(pt.content[i], *this);
+        pt.prob *= cur_seg.ordered_freqs[pt.curr_indices[i]];
         pt.prob /= cur_seg.total_freq;
-        index += 1;
     }
     // cout << pt.prob << endl;
 }
@@ -120,30 +120,15 @@ vector<PT> PT::NewPTs(PriorityQueue &q) const
         // 开始遍历所有位置值大于等于init_pivot值的segment
         SegmentLengthMaps* maps = SegmentLengthMaps::getInstance();
 
-        for (int i = pivot; i < curr_indices.size() - 1; i++) {
+        for (int i = pivot; i < curr_indices.size(); i++) {
             // 复制一份 curr_indices 到临时变量
             std::vector<int> temp_curr_indices = curr_indices;
 
             // 模拟加 1
             temp_curr_indices[i] += 1;
 
-            size_t max_idx=0;
-
-            switch (content[i].type)
-            {
-            case 1:
-                max_idx = q.m.letters[maps->getID(content[i])].ordered_values.size();
-                break;
-            case 2:
-                max_idx = q.m.digits[maps->getID(content[i])].ordered_values.size();
-                break;
-            case 3:
-                max_idx = q.m.symbols[maps->getID(content[i])].ordered_values.size();
-                break;
-            default:
-                throw "undefined_segment_error";
-                break;
-            }
+            const segment& model_seg = maps->getSeginPQ(content[i], q);
+            size_t max_idx = model_seg.ordered_values.size();
 
             if (temp_curr_indices[i] < max_idx) {
                 int temp_pivot = i;
@@ -156,10 +141,8 @@ vector<PT> PT::NewPTs(PriorityQueue &q) const
                 res.emplace_back(std::move(copy));
             }
         }
-        
         return res;
     }
-
     return res;
 }
 
@@ -168,18 +151,15 @@ vector<PT> PT::NewPTs(PriorityQueue &q) const
 // 等待异步任务完成的函数
 void wait_for_pending_tasks() {
     cout << "i will wait" << endl;
-    while (pending_task_count.load() >= MAX_PENDING_TASKS) {
-        // cout << pending_task_count.load() << endl;
+    while (thread_pool->pending_tasks() >= MAX_PENDING_TASKS) {
 #ifdef DEBUG
-        if (pending_task_count.load() > 0) {
-            printf("[DEBUG] ⏳ Waiting for tasks to complete... (current: %d)\n", 
-                   pending_task_count.load());
-        }
+        printf("[DEBUG] ⏳ Waiting for tasks to complete... (thread_pool pending: %zu)\n", 
+               thread_pool->pending_tasks());
 #endif
         
         // 短暂等待，让CPU处理其他任务
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        cout <<"sleep ing " << endl;
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        cout <<"sleeping " << endl;
         // 可选：检查是否有足够的猜测数据可以哈希
         // check_and_perform_hash();
     }
@@ -191,52 +171,78 @@ void wait_for_pending_tasks() {
 // 尽量看懂，然后进行并行实现
 void PriorityQueue::Generate(PT pt)
 {
+    // 1. 准备生成任务
     // 计算PT的概率，这里主要是给PT的概率进行初始化
     CalProb(pt);
     string prefix = "";
+    segment* a = nullptr;
+
     // 对于只有一个segment的PT，直接遍历生成其中的所有value即可
-    if (pt.content.size() == 1)
-    {
-        // 指向最后一个segment的指针，这个指针实际指向模型中的统计数据
 
-        //segment 反正很小，就直接复制吧。 更安全，pt毕竟要被pop掉
-        segment* a = &pt.content[0];
+    if (pt.content.size() == 1) {
+        a = &pt.content[0];
+    } else {
+        a = &pt.content[pt.content.size() - 1];
+        SegmentLengthMaps * maps = SegmentLengthMaps::getInstance();
+        int seg_idx = 0;
+        for (int idx : pt.curr_indices) // train.cpp 里写， curr_indices 是有最后一个seg的...不过没人说没有，好吧。
+        {
+            // 不能直接用。。。。线性查找改成hash，就这样了。
+            const segment& cur_seg = pt.content[seg_idx];
+            int cur_seg_type =  pt.content[seg_idx].type;
+            int cur_seg_length = pt.content[seg_idx].length;
+            prefix += maps->getSeginPQ(cur_seg, *this).ordered_values[idx];
+            seg_idx += 1;
+            // if (seg_idx == pt.content.size() - 1)
+            // {
+            //     break;
+            // }
+        }
+    }
 
-        //TODO 转变成添加任务的逻辑，并且任务数达到10_0000则launch, prefix是 ""
-        //BUG ?? 姑且认为 pt.max_indices[0] 其实就是a,只不过一个是pt里的副本，一个是model那里的。
-        // 因为存了好几遍所以显得乱。
+    // 2. 添加生成任务
+    task_manager->add_task(a, prefix, *this);
 
-        string temp = "";
-        task_manager->add_task(a, temp, *this);
-        if(task_manager->guesscount > GPU_BATCH_SIZE){
+    // 3. 如果达到一定量，以及一些要求， 就提交任务。
+    if(task_manager->guesscount > GPU_BATCH_SIZE){
         // 🔥 关键：检查是否达到任务数限制
-            if (pending_task_count.load() >= MAX_PENDING_TASKS) {
+        if (thread_pool->pending_tasks() >= MAX_PENDING_TASKS) {
 #ifdef DEBUG
-printf("[DEBUG] ⚠️ Max pending tasks (%d) reached, waiting...\n", MAX_PENDING_TASKS);
+            printf("[DEBUG] ⚠️ Max pending tasks (%d) reached, waiting... (current: %zu)\n", 
+                   MAX_PENDING_TASKS, thread_pool->pending_tasks());
 #endif
+
                 // 等待当前任务完成
                 wait_for_pending_tasks();
             }
-            int current_pending = pending_task_count.load();  // 原子读取
-            cout << current_pending << endl;
-
-            // 增加任务计数
             
             // 创建异步任务数据 (移动语义 把 task_manager 搬走)
             auto* async_task = new AsyncGpuTask(std::move(*task_manager));
             
-            // 提交到线程池
-            thread_pool->enqueue([async_task, this](){// 不过这样做好像还是不能实际反应线程池任务数量。
-
-                async_gpu_task(async_task, *this);
-                pending_task_count--;    
-                int cur_task = pending_task_count.load();
-                cout << "now -1 has  " << cur_task << " tasks\n";
+            // 同步的任务
+            thread_pool->enqueue([async_task, this](){
+                try {
+                    sync_gpu_task(async_task, *this);  // 调用同步版本
+                } catch (...) {
+                    std::cerr << "Sync GPU task exception\n";
+                }
             });
-            pending_task_count++;
-            int cur_task = pending_task_count.load();
-            cout << "now +1 has  " << cur_task << " tasks\n";
 
+//             // 提交到线程池
+//             thread_pool->enqueue([async_task, this](){// 不过这样做好像还是不能实际反应线程池任务数量。
+//                 async_gpu_task(async_task, *this);
+
+// #ifdef TASK_COUNT
+//                 pending_task_count--;    
+//                 int cur_task = pending_task_count.load();
+//                 cout << "now -1 has  " << cur_task << " tasks\n";
+// #endif
+//             });
+// #ifdef TASK_COUNT
+//             pending_task_count++;
+//             int cur_task = pending_task_count.load();
+//             cout << "now +1 has  " << cur_task << " tasks\n";
+// #endif
 
             // TaskManager已经被移动，重新创建一个新的
             task_manager = new TaskManager();
@@ -245,87 +251,6 @@ printf("[DEBUG] ⚠️ Max pending tasks (%d) reached, waiting...\n", MAX_PENDIN
         }
 
 
-    }
-    else
-    {
+    
 
-        SegmentLengthMaps * maps = SegmentLengthMaps::getInstance();
-        string guess;
-        int seg_idx = 0;
-        for (int idx : pt.curr_indices) // train.cpp 里写， curr_indices 是有最后一个seg的...不过没人说没有，好吧。
-        {
-            // 不能直接用。。。。线性查找改成hash，就这样了。
-            int cur_seg_type =  pt.content[seg_idx].type;
-            int cur_seg_length = pt.content[seg_idx].length;
-            switch (cur_seg_type) 
-            {
-            case 1:
-                guess += m.letters[maps->getLetterID(cur_seg_length)].ordered_values[idx];
-                break;
-            case 2:
-                guess += m.digits[maps->getDigitID(cur_seg_length)].ordered_values[idx];                
-                break;
-            case 3:
-                guess += m.symbols[maps->getSymbolID(cur_seg_length)].ordered_values[idx];                
-                break;
-            default:
-                throw "undefined_segment_error";
-                break;
-            }
-
-            seg_idx += 1;
-            if (seg_idx == pt.content.size() - 1)
-            {
-                break;
-            }
-        }
-
-
-        // 指向最后一个segment的指针，这个指针实际指向模型中的统计数据
-        //BUGFIX 由于我add_task 里面只需要用到 seg 的type 和length 信息， 因此
-        // 我觉得seg 就不应该有那些vector成员变量的，那些应该存在model 里面，seg 弄一些函数 
-        // ，可以mapping到model 的相应 seg信息就好了。
-        segment *a = &pt.content[pt.content.size() - 1];
-
-        //TODO 转变成添加任务的逻辑，并且任务数达到10_0000则launch, 有prefix
-
-#ifdef TIME_COUNT
-auto start_gpu_kernel = system_clock::now();
-#endif
-
-        task_manager->add_task(a, guess, *this);
-        if(task_manager->guesscount > GPU_BATCH_SIZE){
-
-        // 🔥 关键：检查是否达到任务数限制
-            if (pending_task_count.load() >= MAX_PENDING_TASKS) {
-#ifdef DEBUG
-printf("[DEBUG] ⚠️ Max pending tasks (%d) reached, waiting...\n", MAX_PENDING_TASKS);
-#endif
-                // 等待当前任务完成
-                wait_for_pending_tasks();
-            }
-
-
-            // 创建异步任务数据 (移动语义 把 task_manager 搬走)
-            auto* async_task = new AsyncGpuTask(std::move(*task_manager));
-            
-            // 提交到线程池
-            thread_pool->enqueue([async_task, this](){// 不过这样做好像还是不能实际反应线程池任务数量。
-
-                async_gpu_task(async_task, *this);
-                pending_task_count--;    
-                int cur_task = pending_task_count.load();
-                cout << "now -1 has  " << cur_task << " tasks\n";
-            });
-            pending_task_count++;
-            int cur_task = pending_task_count.load();
-            cout << "now +1 has  " << cur_task << " tasks\n";
-
-
-            // TaskManager已经被移动，重新创建一个新的
-            task_manager = new TaskManager();
-        }
-
-
-    }
 }
