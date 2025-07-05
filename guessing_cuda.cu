@@ -30,53 +30,49 @@ SegmentLengthMaps* SegmentLengthMaps::instance = nullptr;
 PTMaps* PTMaps::instance = nullptr;
 
 // 统一的缓冲区管理（无论是否使用线程池）
-extern std::vector<char*> pending_gpu_buffers;  // 等待释放的GPU缓冲区指针
-extern mutex main_data_mutex;
-extern mutex gpu_buffer_mutex;
 
-#ifdef USING_POOL
 void async_gpu_task(AsyncGpuTask* task_data, PriorityQueue& q) {
+#ifdef DEBUG
+    printf("[DEBUG] 🎯 async_gpu_task: Received async GPU task with %d tasks, %d guesses\n", 
+           task_data->task_manager.taskcount, task_data->task_manager.guesscount);
+#endif
+
+    
     try {
-        // 1. 执行GPU计算（使用移动的TaskManager）
-        task_data->task_manager.launch_gpu_kernel(
-            task_data->local_guesses, 
-            q,
-            task_data->gpu_buffer  // 传递gpu_buffer引用
-        );
-        
-        // 2. 将结果插入主guesses向量（需要加锁）
-        {
-            std::lock_guard<std::mutex> lock1(main_data_mutex);
-            std::lock_guard<std::mutex> lock2(gpu_buffer_mutex);
-            
-            // 插入猜测结果
-            q.guesses.insert(q.guesses.end(), 
-                           task_data->local_guesses.begin(), 
-                           task_data->local_guesses.end());
-            
-            // 将GPU缓冲区指针加入管理列表
-            if (task_data->gpu_buffer != nullptr) {
-                pending_gpu_buffers.push_back(task_data->gpu_buffer);
-            }
-        }
-        
+#ifdef DEBUG
+        printf("[DEBUG] 🎯 async_gpu_task: Launching async pipeline...\n");
+#endif
+        pending_task_count++;
+        int cur_task = pending_task_count.load();
+        cout << "now +1 has  " << cur_task << " tasks\n";
+        AsyncGpuPipeline::launch_async_pipeline(std::move(task_data->task_manager), q);
+#ifdef DEBUG
+    printf("[DEBUG] 🎯 async_gpu_task: Pipeline launched successfully\n");
+
+#endif        
     } catch (const std::exception& e) {
-        std::cerr << "GPU async task error: " << e.what() << std::endl;
-        // Clean up GPU buffer on error
-        if (task_data->gpu_buffer != nullptr) {
-            delete[] task_data->gpu_buffer;
-        }
+#ifdef DEBUG
+        printf("[DEBUG] ❌ async_gpu_task: Pipeline launch failed: %s\n", e.what());
+#endif
+        std::cerr << "GPU async pipeline error: " << e.what() << std::endl;
+        
     }
     
-    // 3. 任务完成，减少计数
-    pending_task_count--;  // 原子操作，线程安全
-
-
-    // Clean up task data
+    // 并不清理，， 因为 task_manager d的生命周期是 后续流水线管理了（被移交控制权了）
+    // 清理AsyncGpuTask
+    // task_data里面的task_manager 已经被拿走了， 故释放
     delete task_data;
+    pending_task_count--;
+    int cur_task = pending_task_count.load();
+    cout << "now -1 has  " << cur_task << " tasks\n";
+
+#ifdef DEBUG
+    printf("[DEBUG] 🎯 async_gpu_task: Task data cleaned up\n");
+#endif
+
+
 }
 
-#endif
 
 #ifdef TIME_COUNT
 double time_add_task = 0;
@@ -255,9 +251,9 @@ auto start_add_task = system_clock::now();
     guesscount += seginmodel.ordered_values.size();
 
 #ifdef DEBUG
-    cout << "Added task: ";
-    seginmodel.PrintSeg();
-    cout << " -> ID: " << seg_ids.back() << endl;
+    // cout << "Added task: ";
+    // seginmodel.PrintSeg();
+    // cout << " -> ID: " << seg_ids.back() << endl;
 #endif
 
 
@@ -396,76 +392,12 @@ auto start_before_launch = system_clock::now();
     h_tasks.cumulative_guess_offsets = cumulative_offsets.data();
 
 
-#ifdef DEBUG
-    cout << "\nResult buffer calculation:" << endl;
-    cout << "Total result length: " << result_len << " characters" << endl;
-    cout << "Each Task's offset and length:" << endl;
-    for(int i = 0; i < seg_value_count.size(); i++){
-        int task_total_len = seg_value_count[i] * (seg_lens[i] + prefix_lens[i]);
-        cout << "  Task " << i << ": offset=" << res_offset[i] 
-             << ", single guess length=" << (seg_lens[i] + prefix_lens[i])
-             << ", guess count=" << seg_value_count[i]
-             << ", total length=" << task_total_len << endl;
-    }
-    
-    // Verify total length calculation
-    int calculated_total = 0;
-    for(int i = 0; i < seg_value_count.size(); i++){
-        calculated_total += seg_value_count[i] * (seg_lens[i] + prefix_lens[i]);
-    }
-    cout << "Verify total length: " << calculated_total << " (should equal " << result_len << ") " 
-         << (calculated_total == result_len ? "RIGHT" : "WRONG") << endl;
-    cout << "\nCumulative offset array:" << endl;
-    for(int i = 0; i <= taskcount; i++){
-        cout << "  cumulative_offsets[" << i << "] = " << cumulative_offsets[i] << endl;
-    }
-
-#endif
 
 
     // 1.999. Allocate local host buffer for this call (thread-safe)
     h_guess_buffer = new char[result_len]; // host端的guess_buffer (结果 buffer)
 
 
-#ifdef DEBUG
-    // Check memory allocation
-    if (h_guess_buffer == nullptr) {
-        cout << "Error: Unable to allocate " << result_len << " bytes of memory!" << endl;
-        return;
-    } else {
-        cout << "Successfully allocated " << result_len << " bytes of host memory" << endl;
-    }
-    
-    // Verify data consistency
-    cout << "\nData consistency check:" << endl;
-    int total_guesses_check = 0;
-    for (int i = 0; i < seg_value_count.size(); i++) {
-        total_guesses_check += seg_value_count[i];
-    }
-    cout << "Calculated total guess count: " << total_guesses_check 
-         << " (should equal " << guesscount << ") " 
-         << (total_guesses_check == guesscount ? "RIGHT" : "WRONG") << endl;
-    
-    if (seg_types.size() != taskcount || 
-        seg_ids.size() != taskcount || 
-        seg_lens.size() != taskcount || 
-        prefixs.size() != taskcount || 
-        prefix_lens.size() != taskcount || 
-        seg_value_count.size() != taskcount) {
-        cout << "Warning: Array size inconsistency!" << endl;
-        cout << "  seg_types.size() = " << seg_types.size() << endl;
-        cout << "  seg_ids.size() = " << seg_ids.size() << endl;
-        cout << "  seg_lens.size() = " << seg_lens.size() << endl;
-        cout << "  prefixs.size() = " << prefixs.size() << endl;
-        cout << "  prefix_lens.size() = " << prefix_lens.size() << endl;
-        cout << "  seg_value_count.size() = " << seg_value_count.size() << endl;
-        cout << "  taskcount = " << taskcount << endl;
-    } else {
-        cout << "All array sizes consistent RIGHT" << endl;
-    }
-    
-    cout << "=== Debug info end ===" << endl << endl;
-#endif
 
     //2. 分配gpu 内存 以及 
     //3.copy
@@ -526,10 +458,6 @@ time_before_launch += double(duration_before_launch.count()) * microseconds::per
     int blocks = (total_threads_needed + threads_per_block - 1) / threads_per_block;
     
 //TODO ，看看每次启用多少线程， 以及尝试二分查找来找 guess对应的task
-#ifdef DEBUG  
-    cout << "Launch kernel: blocks=" << blocks << ", threads_per_block=" << threads_per_block << endl;
-    cout << "Total threads: " << blocks * threads_per_block << ", guess count: " << guesscount << endl;
-#endif
 
 
 #ifdef TIME_COUNT
@@ -650,23 +578,11 @@ time_string_process += double(duration_string_process.count()) * microseconds::p
 
     // 注意：h_guess_buffer 由外部管理，不在这里释放
 
-#ifdef DEBUG
-    cout << "GPU memory release completed, h_guess_buffer managed externally" << endl;
-#endif
 
 
     //8. Clean TaskManager
     clean();
 
-#ifdef TIME_COUNT
-auto end_after_launch = system_clock::now();
-auto duration_after_launch = duration_cast<microseconds>(end_after_launch - start_after_launch);
-time_after_launch += double(duration_after_launch.count()) * microseconds::period::num / microseconds::period::den;
-
-auto end_one_batch = system_clock::now();
-auto duration_one_batch = duration_cast<microseconds>(end_one_batch - start_one_batch);
-time_all_batch += double(duration_one_batch.count()) * microseconds::period::num / microseconds::period::den;
-#endif
 }
 
 
@@ -724,9 +640,6 @@ void TaskManager::print() {
 
 void init_gpu_ordered_values_data(GpuOrderedValuesData*& d_gpu_data,PriorityQueue& q) {
 
-#ifdef DEBUG
-    cout << "start init gpu" <<endl;
-#endif
     //cpu上的数据
     GpuOrderedValuesData h_gpu_data;
 
@@ -751,9 +664,6 @@ void init_gpu_ordered_values_data(GpuOrderedValuesData*& d_gpu_data,PriorityQueu
     int* letter_seg_offsets= nullptr; // Which ordered_value is the first one of each letter segment in value_offsets
     int* digit_seg_offsets= nullptr; // Which ordered_value is the first one of each digit segment in value_offsets
     int* symbol_seg_offsets= nullptr; // Which ordered_value is the first one of each symbol segment in value_offsets
-#ifdef DEBUG
-    cout <<"end init local var" <<endl;
-#endif
     for (const auto& seg : q.m.letters) {
         total_letter_length += seg.ordered_values.size() * seg.length;
         letter_offsetarr_length += seg.ordered_values.size();
@@ -766,9 +676,6 @@ void init_gpu_ordered_values_data(GpuOrderedValuesData*& d_gpu_data,PriorityQueu
         total_symbol_length += seg.ordered_values.size()* seg.length;
         symbol_offsetarr_length += seg.ordered_values.size();
     }
-#ifdef DEBUG
-    cout <<"part 1" <<endl;
-#endif
 
     letter_all_values = new char[total_letter_length];
     letter_value_offsets = new int[letter_offsetarr_length+1];
@@ -782,9 +689,6 @@ void init_gpu_ordered_values_data(GpuOrderedValuesData*& d_gpu_data,PriorityQueu
     symbol_value_offsets = new int[symbol_offsetarr_length+1];
     symbol_seg_offsets = new int[q.m.symbols.size()+1]; 
 
-#ifdef DEBUG
-    cout <<"part 1.1" <<endl;
-#endif
     // Added one more offset to represent the end, actually not corresponding to segment and value
 
     int value_offset = 0;
@@ -801,9 +705,6 @@ void init_gpu_ordered_values_data(GpuOrderedValuesData*& d_gpu_data,PriorityQueu
             }
         }
     }
-#ifdef DEBUG
-    cout <<"part 1.2"<<endl;
-#endif
     letter_seg_offsets[q.m.letters.size()] = seg_offset; // Fill in the last one... actually corresponds to length 0
     letter_value_offsets[letter_offsetarr_length] = value_offset;
     seg_offset = 0;
@@ -820,16 +721,10 @@ void init_gpu_ordered_values_data(GpuOrderedValuesData*& d_gpu_data,PriorityQueu
             }
         }
     }
-#ifdef DEBUG
-    cout <<"part 1.3"<<endl;
-#endif
     digit_seg_offsets[q.m.digits.size()] = seg_offset; // Fill in the last one... actually corresponds to length 0
     digits_value_offsets[digit_offsetarr_length] = value_offset;
     seg_offset = 0;
     value_offset = 0;   
-#ifdef DEBUG
-    cout <<"part 2" <<endl;
-#endif
     for (int i=0;i< q.m.symbols.size();i++) {
         symbol_seg_offsets[i] = seg_offset;
         const auto& seg = q.m.symbols[i];
@@ -844,43 +739,11 @@ void init_gpu_ordered_values_data(GpuOrderedValuesData*& d_gpu_data,PriorityQueu
     symbol_seg_offsets[q.m.symbols.size()] = seg_offset; // Fill in the last one
     symbol_value_offsets[symbol_offsetarr_length] = value_offset;
 
-#ifdef DEBUG
-    cout <<"part 3" <<endl;
-#endif
     // Related things need addresses... pointers are just pointers, interpreted as CPU or GPU memory depending on specific context
     // For example, cudaMemcpy uses cudaMemcpyKind kind to distinguish.
 
     // Copy data of each pointer to GPU
-#ifdef DEBUG
-    // printf("total_letter_length: %zu\n", total_letter_length);
-    // printf("total_digit_length: %zu\n", total_digit_length);
-    // printf("total_symbol_length: %zu\n", total_symbol_length);
-    // printf("letter_offsetarr_length: %zu\n", letter_offsetarr_length);
-    // printf("digit_offsetarr_length: %zu\n", digit_offsetarr_length);
-    // printf("symbol_offsetarr_length: %zu\n", symbol_offsetarr_length);
 
-    // //TODO Maybe we can print the lengths in q.m. to see if there are any problems.
-
-    // // Check if the first ten letters have problems.
-    // for(int i=0;i<10;i++){
-    //     segment& seg = q.m.letters[i];  
-    //     seg.PrintSeg();
-    //     seg.PrintValues();
-    //     // for(int j = 0; j < seg.ordered_values.size(); j++) {
-    //     //     string letter_value(h_gpu_data.letter_all_values + 
-    //     //         h_gpu_data.letter_value_offsets[h_gpu_data.letter_seg_offsets[i]] + 
-    //     //         j * seg.length, seg.length );
-    //     //     cout << letter_value << " ";
-    //     // }
-    //     cout << endl <<endl;
-    // }
-
-    // The other two can also be checked in a similar way for problems.
-#endif
-
-#ifdef DEBUG
-    cout <<"part 4" <<endl;
-#endif
 
     // Allocate memory and copy
     CUDA_CHECK(cudaMalloc(&h_gpu_data.letter_all_values, total_letter_length * sizeof(char)));
@@ -923,18 +786,12 @@ void init_gpu_ordered_values_data(GpuOrderedValuesData*& d_gpu_data,PriorityQueu
     delete[] digit_seg_offsets;
     delete[] symbol_seg_offsets;
 
-#ifdef DEBUG
-    cout << "GPU data initialization completed, CPU temporary memory released" << endl;
-#endif
 
 }
 
 void clean_gpu_ordered_values_data(GpuOrderedValuesData *& d_gpu_data){
     if (d_gpu_data == nullptr) return;
     
-#ifdef DEBUG
-    cout << "Cleaning GPU ordered values data..." << endl;
-#endif
 
     // Copy struct from GPU to CPU to get pointer addresses
     GpuOrderedValuesData h_gpu_data;
@@ -984,9 +841,6 @@ void clean_gpu_ordered_values_data(GpuOrderedValuesData *& d_gpu_data){
     CUDA_CHECK(cudaFree(d_gpu_data));
     d_gpu_data = nullptr;
 
-#ifdef DEBUG
-    cout << "GPU ordered values data cleanup completed" << endl;
-#endif
 }
 
 // Function to clean global variables
@@ -1003,9 +857,6 @@ void cleanup_global_cuda_resources() {
         task_manager = nullptr;
     }
     
-#ifdef DEBUG
-    cout << "Global CUDA resources cleanup completed" << endl;
-#endif
 }
 
 

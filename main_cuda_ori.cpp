@@ -8,10 +8,8 @@
 
 
 // avx
-#ifdef USING_SIMD
 #include "md5_avx.h"  // AVX实现的MD5
 #include <immintrin.h> // AVX 指令集头文件
-#endif
 
 using namespace std;
 using namespace chrono;
@@ -20,18 +18,53 @@ using namespace chrono;
 mutex main_data_mutex;           // 保护主要数据结构
 mutex gpu_buffer_mutex;         // 保护GPU缓冲区管理
 vector<char*> pending_gpu_buffers;  // 等待释放的GPU缓冲区指针
-
-#ifdef USING_POOL
+PriorityQueue q;
+double time_hash = 0;  // 用于MD5哈希的时间
+int history = 0;
+int NUM_PER_HASH =0;
 #include "ThreadPool.h"
 #include <atomic>
 std::atomic<int> pending_task_count(0);  // 初始化为0
 
 std::unique_ptr<ThreadPool> thread_pool;  // 声明全局变量，但不初始化
+void perform_hash_calculation(PriorityQueue& q, double& time_hash);
+// 检查并执行哈希计算
+void check_and_perform_hash() {
+    int current_guess_count;
+    {
+        std::lock_guard<std::mutex> lock(main_data_mutex);
+        current_guess_count = q.guesses.size();
+    }
+    
+    if (current_guess_count >= NUM_PER_HASH) {
+#ifdef DEBUG
+        printf("[DEBUG] 🔨 Performing hash calculation with %d guesses\n", current_guess_count);
+#endif
+        
+        cout << " here to hash in main" << endl;
+        {
+            std::lock_guard<std::mutex> lock1(main_data_mutex);
+            std::lock_guard<std::mutex> lock2(gpu_buffer_mutex);
+            
+            perform_hash_calculation(q, time_hash);
+            
+            cout << "hash end in main" << endl;
+            // 释放所有GPU缓冲区
+            for (char* buffer : pending_gpu_buffers) {
+                delete[] buffer;
+            }
+            pending_gpu_buffers.clear();
+            
+            // 更新历史记录并清空guesses
+            history += q.guesses.size();
+            q.guesses.clear();
+        }
+    }
+}
 
 void perform_hash_calculation(PriorityQueue& q, double& time_hash) {
     auto start_hash = system_clock::now();
     
-    #ifdef USING_SIMD
     // 使用AVX进行批处理
     string_view passwords[8];
     for(size_t i = 0; i < q.guesses.size(); i += 8) {
@@ -48,13 +81,7 @@ void perform_hash_calculation(PriorityQueue& q, double& time_hash) {
         alignas(32) __m256i state[4]; // 8个密码的状态向量
         MD5Hash_AVX(passwords, state);
     }
-    #else
-    // 使用标准MD5计算
-    bit32 state[4];
-    for (string_view pw : q.guesses) {
-        MD5Hash(pw, state);
-    }
-    #endif
+
     
     // 计算哈希时间
     auto end_hash = system_clock::now();
@@ -62,14 +89,6 @@ void perform_hash_calculation(PriorityQueue& q, double& time_hash) {
     time_hash += double(duration.count()) * microseconds::period::num / microseconds::period::den;
 }
 
-#endif
-
-//BUG 需要确保 产生的 猜测 每次 都 大于 1000000 ， 因为我只管理了一个 这个指针
-// 然后需要每次生成猜测， 都把所有hash掉。
-// #ifndef USING_POOL
-//BUGFIXUP 不需要了, 原来 如果并发 launch_gpu_kernel 的时候，只有一个全局指针用。。会出事。
-// extern char* h_guess_buffer;
-// #endif
 
 
 #ifdef TIME_COUNT
@@ -115,14 +134,10 @@ const int NUM_EXPERIMENTS = sizeof(EXPERIMENTS) / sizeof(EXPERIMENTS[0]);
 
 int main()
 {
-#ifdef _WIN32
     system("chcp 65001 > nul");
-#endif
 
-#ifdef USING_POOL
     // 在main函数开始时初始化线程池
     thread_pool = make_unique<ThreadPool>(THREAD_NUM);
-#endif
 
     task_manager = new TaskManager();
 
@@ -130,22 +145,10 @@ int main()
     auto now = system_clock::now();
     auto now_time = system_clock::to_time_t(now);
 
-#ifdef _WIN32
-    #ifdef USING_SIMD
     cout << "\n--- WIN SIMD CUDA MD5 实验批次 [" << std::ctime(&now_time) << "] ---\n";
-    #else
-    cout << "\n--- WIN 标准CUDA MD5 实验批次 [" << std::ctime(&now_time) << "] ---\n";
-    #endif
-#else
-    #ifdef USING_SIMD
-    cout << "\n--- SIMD MD5 CUDA 实验批次 [" << std::ctime(&now_time) << "] ---\n";
-    #else
-    cout << "\n--- 标准 MD5 CUDA 实验批次 [" << std::ctime(&now_time) << "] ---\n";
-    #endif
-#endif
     
     // 训练模型（只需一次）
-    PriorityQueue q;
+    // 改成全局变量便于访问
     auto start_train = system_clock::now();
 // 将windows下用的main.cpp合并进来了
 #ifdef _WIN32
@@ -155,8 +158,6 @@ int main()
 #else
     q.m.train(".\\guessdata\\Rockyou-singleLined-full.txt");
 #endif
-#else
-    q.m.train("./guessdata/Rockyou-singleLined-full.txt");
 #endif
 
 
@@ -185,15 +186,13 @@ cout << "time transfer gpu :" << time_transfergpu << endl;
     for (int exp_idx = 0; exp_idx < NUM_EXPERIMENTS; exp_idx++) {
         // 获取当前实验配置
         int GENERATE_N = EXPERIMENTS[exp_idx].generate_n;
-        int NUM_PER_HASH = EXPERIMENTS[exp_idx].batch_size;
+        NUM_PER_HASH = EXPERIMENTS[exp_idx].batch_size;
         const char* LABEL = EXPERIMENTS[exp_idx].label;
         
         cout << "\n==========================================" << endl;
         cout << "实验 #" << (exp_idx + 1) << ": " << LABEL << endl;
         cout << "猜测上限: " << GENERATE_N << ", 批处理大小: " << NUM_PER_HASH << "， GPU批处理大小：" << GPU_BATCH_SIZE << ", 每个线程处理的guess数："<< GUESS_PER_THREAD;
-#ifdef USING_POOL
         cout << "， 线程池线程数: "<< THREAD_NUM;
-#endif
         cout << endl;
         cout << "==========================================" << endl;
         
@@ -223,13 +222,12 @@ cout <<" 初始化队列完毕" <<endl;
 
 #endif
 
-        double time_hash = 0;  // 用于MD5哈希的时间
         double time_guess = 0; // 哈希和猜测的总时长
 #ifdef TIME_COUNT
         double time_pop_next = 0;
 #endif
         auto start = system_clock::now();
-        int history = 0;
+        // int history = 0;
 
         while (!q.priority.empty()) {
 #ifdef TIME_COUNT
@@ -291,27 +289,31 @@ cout << "time_all_batch: " << time_all_batch << " seconds" << endl <<endl;
             }
 
             // 检查是否需要进行哈希计算
-#ifdef USING_POOL
             int current_guess_count;
             {
+                // cout << " here to look guesses count " <<endl;
                 std::lock_guard<std::mutex> lock(main_data_mutex);
                 current_guess_count = q.guesses.size();
+                // cout << current_guess_count << endl;
             }
             
             if (current_guess_count >= NUM_PER_HASH) {
                 // 等待所有异步任务完成（需要实现等待机制）
-                
+                //BUG maybe 等待
                 // 执行哈希计算和缓冲区清理
                 {
+                    // cout << " here to hash" << endl;
                     std::lock_guard<std::mutex> lock1(main_data_mutex);
                     std::lock_guard<std::mutex> lock2(gpu_buffer_mutex);
                     
                     perform_hash_calculation(q, time_hash);
                     
+                    // cout <<"hash end" << endl;
                     // 释放所有GPU缓冲区
                     for (char* buffer : pending_gpu_buffers) {
                         delete[] buffer;
                     }
+                    cout << "pendfing_gpu_buffer_size" << pending_gpu_buffers.size()<<endl;
                     pending_gpu_buffers.clear();
                     
                     // 更新历史记录并清空guesses
@@ -319,28 +321,9 @@ cout << "time_all_batch: " << time_all_batch << " seconds" << endl <<endl;
                     q.guesses.clear();
                 }
             }
-#else
-            if (q.guesses.size() >= NUM_PER_HASH) {
-                perform_hash_calculation(q, time_hash);
-                
-                // 记录已经生成的口令总数
-                history += q.guesses.size();
-                q.guesses.clear();
-                
-                // 统一使用缓冲区管理，释放所有GPU缓冲区
-                {
-                    std::lock_guard<std::mutex> lock(gpu_buffer_mutex);
-                    for (char* buffer : pending_gpu_buffers) {
-                        delete[] buffer;
-                    }
-                    pending_gpu_buffers.clear();
-                }
-            }
-#endif
         }
 
         // 最后的哈希计算（处理剩余的guesses）
-#ifdef USING_POOL
         {
             std::lock_guard<std::mutex> lock1(main_data_mutex);
             std::lock_guard<std::mutex> lock2(gpu_buffer_mutex);
@@ -356,29 +339,16 @@ cout << "time_all_batch: " << time_all_batch << " seconds" << endl <<endl;
             }
             pending_gpu_buffers.clear();
         }
-#else
-        if (!q.guesses.empty()) {
-            perform_hash_calculation(q, time_hash);
-            history += q.guesses.size();
-        }
-        
-        // 清理剩余GPU缓冲区（非线程池模式）
-        {
-            std::lock_guard<std::mutex> lock(gpu_buffer_mutex);
-            for (char* buffer : pending_gpu_buffers) {
-                delete[] buffer;
-            }
-            pending_gpu_buffers.clear();
-        }
-#endif
-
         // 清理TaskManager
         task_manager->clean();
         
-#ifdef USING_POOL
         // 每轮实验结束后，等待线程池所有任务完成并清理
         cout << "等待线程池任务完成..." << endl;
+#ifdef TIME_COUNT
+auto start_clear_time = system_clock::now();
+#endif
         try {
+            std::this_thread::sleep_for(std::chrono::seconds(10)); // 睡 1000 秒
             // 按照 main_pool.cpp 的方式清理并重建线程池
             thread_pool.reset();  // 销毁当前线程池，等待所有任务完成
             thread_pool = make_unique<ThreadPool>(THREAD_NUM);  // 重新创建
@@ -393,12 +363,22 @@ cout << "time_all_batch: " << time_all_batch << " seconds" << endl <<endl;
                 for (char* buffer : pending_gpu_buffers) {
                     delete[] buffer;
                 }
+#ifdef TIME_COUNT
+auto end_clear_time = system_clock::now();
+auto duration_clear_time = duration_cast<microseconds>(end_clear_time - start_clear_time);
+double time_clear_time = double(duration_clear_time.count()) * microseconds::period::num / microseconds::period::den;
+
+cout << "time_clear_time" << time_clear_time << endl;
+#endif
                 pending_gpu_buffers.clear();
+                cout << "gpu缓冲区清理完毕" <<endl;
             }
         } catch (const std::exception& e) {
             cerr << "重建线程池失败: " << e.what() << endl;
             abort();
         }
+
+
         pending_task_count = 0;
 #ifdef TIME_COUNT
         time_pop_next = 0;
@@ -413,8 +393,9 @@ cout << "time_all_batch: " << time_all_batch << " seconds" << endl <<endl;
         time_memcpy_toh = 0;
         time_all_batch = 0;
 #endif
+        time_hash = 0;
+        history = 0;
         cout << "实验 #" << (exp_idx + 1) << " 完成，线程池已清理" << endl;
-#endif
     }
 
     clean_gpu_ordered_values_data(gpu_data);

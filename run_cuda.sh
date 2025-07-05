@@ -36,12 +36,12 @@ for bsize in 1000000 ; do
     # for gptread in 1 4 16 64 ; do
     for gptread in  4 ; do
         # for threadnum in 2 8 32; do
-        for threadnum in  8 ; do
+        for threadnum in  16 ; do
 
             echo "🔧 编译 cuda GPU_BATCH_SIZE=$bsize , guess per thread ${gptread} , thread num ${threadnum}"
 
             nvcc -ccbin "$CL_PATH" \
-                main_cuda_ori.cpp guessing_cuda.cu guessing.cpp train.cpp md5.cpp md5_avx.cpp \
+                main_cuda_ori.cpp guessing_cuda.cu async_gpu_pipeline.cu guessing.cpp train.cpp md5.cpp md5_avx.cpp \
                 -o build/guess_bs${bsize}_gpt${gptread}_trn${threadnum} \
                 -std=c++17 \
                 -O2 \

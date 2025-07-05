@@ -2,17 +2,16 @@
 #include "guessing_cuda.h"
 #include "config.h"
 #include <chrono>
+#include <thread>
 
 // 统一的缓冲区管理（无论是否使用线程池）
 extern std::mutex gpu_buffer_mutex;
 extern std::vector<char*> pending_gpu_buffers;
 
-#ifdef USING_POOL
 #include "ThreadPool.h"
 extern std::unique_ptr<ThreadPool> thread_pool;
 extern std::mutex main_data_mutex;
 extern void async_gpu_task(AsyncGpuTask* task_data, PriorityQueue& q);
-#endif
 
 using namespace std;
 using namespace chrono;
@@ -22,7 +21,10 @@ double time_gpu_kernel = 0;
 double time_popnext_non_generate = 0;  // 新增：PopNext中非Generate部分的时间
 double time_calprob = 0;  // 新增：CalProb函数的时间
 #endif
-
+// 添加最大任务数限制
+const int MAX_PENDING_TASKS = 10;  // 限制最多4个异步任务
+void check_and_perform_hash();
+void perform_hash_calculation(PriorityQueue& q, double& time_hash);
 void PriorityQueue::CalProb(PT &pt)
 {
     // 计算PriorityQueue里面一个PT的流程如下：
@@ -76,68 +78,24 @@ void PriorityQueue::init()
 
 void PriorityQueue::PopNext()
 {
-#ifdef TIME_COUNT
-    auto start_popnext = system_clock::now();
-#endif
     // 对优先队列最前面的PT，首先利用这个PT生成一系列猜测
     auto front_iter = priority.begin();
     Generate(*front_iter);
 
-#ifdef TIME_COUNT
-    auto end_generate = system_clock::now();
-    auto start_new_pts = system_clock::now();
-#endif
     // 然后需要根据即将出队的PT，生成一系列新的PT
     vector<PT> new_pts = (*front_iter).NewPTs(*this);
     for (PT &pt : new_pts)
     {
-#ifdef TIME_COUNT
-    auto start_calprob = system_clock::now();
-#endif
         // 计算概率
         CalProb(pt);
-#ifdef TIME_COUNT
-    auto end_calprob = system_clock::now();
-    auto duration_calprob = duration_cast<microseconds>(end_calprob - start_calprob);
-    time_calprob += double(duration_calprob.count()) * microseconds::period::num / microseconds::period::den;
-#endif
 
         priority.insert(pt);
 
-        // // 接下来的这个循环，作用是根据概率，将新的PT插入到优先队列中
-        // for (auto iter = priority.begin(); iter != priority.end(); iter++)
-        // {
-        //     // 对于非队首和队尾的特殊情况
-        //     if (iter != priority.end() - 1 && iter != priority.begin())
-        //     {
-        //         // 判定概率
-        //         if (pt.prob <= iter->prob && pt.prob > (iter + 1)->prob)
-        //         {
-        //             priority.emplace(iter + 1, pt);
-        //             break;
-        //         }
-        //     }
-        //     if (iter == priority.end() - 1)
-        //     {
-        //         priority.emplace_back(pt);
-        //         break;
-        //     }
-        //     if (iter == priority.begin() && iter->prob < pt.prob)
-        //     {
-        //         priority.emplace(iter, pt);
-        //         break;
-        //     }
-        // }
     }
 
     // 现在队首的PT善后工作已经结束，将其出队（删除）
     priority.erase(front_iter);
 
-#ifdef TIME_COUNT
-    auto end_new_pts = system_clock::now();
-    auto duration_new_pts = duration_cast<microseconds>(end_new_pts - start_new_pts);
-    time_popnext_non_generate += double(duration_new_pts.count()) * microseconds::period::num / microseconds::period::den;
-#endif
 }
 
 // 这个函数你就算看不懂，对并行算法的实现影响也不大
@@ -160,24 +118,6 @@ vector<PT> PT::NewPTs(PriorityQueue &q) const
         // 上面这句话里是不是有没看懂的地方？接着往下看你应该会更明白
 
         // 开始遍历所有位置值大于等于init_pivot值的segment
-        // 注意i < curr_indices.size() - 1，也就是除去了最后一个segment（这个segment的赋值预留给并行环节）
-        // for (int i = pivot; i < curr_indices.size() - 1; i += 1)
-        // {
-        //     // curr_indices: 标记各segment目前的value在模型里对应的下标
-        //     curr_indices[i] += 1;
-
-        //     // max_indices：标记各segment在模型中一共有多少个value
-        //     if (curr_indices[i] < max_indices[i])
-        //     {
-        //         // 更新pivot值
-        //         pivot = i;
-        //         res.emplace_back(*this);
-        //     }
-
-        //     // 这个步骤对于你理解pivot的作用、新PT生成的过程而言，至关重要
-        //     curr_indices[i] -= 1;
-        // }
-        // pivot = init_pivot;
         SegmentLengthMaps* maps = SegmentLengthMaps::getInstance();
 
         for (int i = pivot; i < curr_indices.size() - 1; i++) {
@@ -224,123 +164,90 @@ vector<PT> PT::NewPTs(PriorityQueue &q) const
 }
 
 
+
+// 等待异步任务完成的函数
+void wait_for_pending_tasks() {
+    cout << "i will wait" << endl;
+    while (pending_task_count.load() >= MAX_PENDING_TASKS) {
+        // cout << pending_task_count.load() << endl;
+#ifdef DEBUG
+        if (pending_task_count.load() > 0) {
+            printf("[DEBUG] ⏳ Waiting for tasks to complete... (current: %d)\n", 
+                   pending_task_count.load());
+        }
+#endif
+        
+        // 短暂等待，让CPU处理其他任务
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        cout <<"sleep ing " << endl;
+        // 可选：检查是否有足够的猜测数据可以哈希
+        // check_and_perform_hash();
+    }
+    cout<< "end wait" << endl;
+}
+
+
 // 这个函数是PCFG并行化算法的主要载体
 // 尽量看懂，然后进行并行实现
 void PriorityQueue::Generate(PT pt)
 {
     // 计算PT的概率，这里主要是给PT的概率进行初始化
-#ifdef TIME_COUNT
-    auto start_calprob = system_clock::now();
-#endif
     CalProb(pt);
-#ifdef TIME_COUNT
-    auto end_calprob = system_clock::now();
-    auto duration_calprob = duration_cast<microseconds>(end_calprob - start_calprob);
-    time_calprob += double(duration_calprob.count()) * microseconds::period::num / microseconds::period::den;
-#endif
+    string prefix = "";
     // 对于只有一个segment的PT，直接遍历生成其中的所有value即可
     if (pt.content.size() == 1)
     {
         // 指向最后一个segment的指针，这个指针实际指向模型中的统计数据
-        // segment *a;
 
         //segment 反正很小，就直接复制吧。 更安全，pt毕竟要被pop掉
         segment* a = &pt.content[0];
-        // 在模型中定位到这个segment
-
-        // if (pt.content[0].type == 1)
-        // {
-        //     a = &m.letters[m.FindLetter(pt.content[0])];
-        // }
-        // if (pt.content[0].type == 2)
-        // {
-        //     a = &m.digits[m.FindDigit(pt.content[0])];
-        // }
-        // if (pt.content[0].type == 3)
-        // {
-        //     a = &m.symbols[m.FindSymbol(pt.content[0])];
-        // }
-        
-        // Multi-thread TODO：
-        // 这个for循环就是你需要进行并行化的主要部分了，特别是在多线程&GPU编程任务中
-        // 可以看到，这个循环本质上就是把模型中一个segment的所有value，赋值到PT中，形成一系列新的猜测
-        // 这个过程是可以高度并行化的
-        // for (int i = 0; i < pt.max_indices[0]; i += 1)
-        // {
-        //     string guess = a->ordered_values[i];
-        //     // cout << guess << endl;
-        //     guesses.emplace_back(guess);
-        //     total_guesses += 1;
-        // }
 
         //TODO 转变成添加任务的逻辑，并且任务数达到10_0000则launch, prefix是 ""
         //BUG ?? 姑且认为 pt.max_indices[0] 其实就是a,只不过一个是pt里的副本，一个是model那里的。
         // 因为存了好几遍所以显得乱。
 
-#ifdef TIME_COUNT
-auto start_gpu_kernel = system_clock::now();
-#endif
         string temp = "";
         task_manager->add_task(a, temp, *this);
         if(task_manager->guesscount > GPU_BATCH_SIZE){
-#ifdef USING_POOL
-            // 创建异步任务（使用移动语义）
-            AsyncGpuTask* async_task = new AsyncGpuTask(std::move(*task_manager));
+        // 🔥 关键：检查是否达到任务数限制
+            if (pending_task_count.load() >= MAX_PENDING_TASKS) {
+#ifdef DEBUG
+printf("[DEBUG] ⚠️ Max pending tasks (%d) reached, waiting...\n", MAX_PENDING_TASKS);
+#endif
+                // 等待当前任务完成
+                wait_for_pending_tasks();
+            }
+            int current_pending = pending_task_count.load();  // 原子读取
+            cout << current_pending << endl;
+
+            // 增加任务计数
+            
+            // 创建异步任务数据 (移动语义 把 task_manager 搬走)
+            auto* async_task = new AsyncGpuTask(std::move(*task_manager));
             
             // 提交到线程池
-            thread_pool->enqueue([async_task, this]() {
+            thread_pool->enqueue([async_task, this](){// 不过这样做好像还是不能实际反应线程池任务数量。
+
                 async_gpu_task(async_task, *this);
+                pending_task_count--;    
+                int cur_task = pending_task_count.load();
+                cout << "now -1 has  " << cur_task << " tasks\n";
             });
-            
+            pending_task_count++;
+            int cur_task = pending_task_count.load();
+            cout << "now +1 has  " << cur_task << " tasks\n";
+
+
             // TaskManager已经被移动，重新创建一个新的
             task_manager = new TaskManager();
-#else
-            // 同步版本：预分配缓冲区，然后调用GPU kernel
-            char* h_guess_buffer = nullptr;
-            task_manager->launch_gpu_kernel(guesses, *this, h_guess_buffer);
-            // 将缓冲区指针添加到管理列表（统一管理）
-            {
-                std::lock_guard<std::mutex> lock(gpu_buffer_mutex);
-                pending_gpu_buffers.push_back(h_guess_buffer);
-            }
-            
-            
-#endif
+
+            // std::this_thread::sleep_for(std::chrono::seconds(1000)); // 睡 1000 秒
         }
 
-#ifdef TIME_COUNT
-auto end_gpu_kernel = system_clock::now();
-auto duration_gpu_kernel = duration_cast<microseconds>(end_gpu_kernel - start_gpu_kernel);
-time_gpu_kernel += double(duration_gpu_kernel.count()) * microseconds::period::num / microseconds::period::den;
-#endif 
 
     }
     else
     {
-
-        // 这个for循环的作用：给当前PT的所有segment赋予实际的值（最后一个segment除外）
-        // segment值根据curr_indices中对应的值加以确定
-        // 这个for循环你看不懂也没太大问题，并行算法不涉及这里的加速
-        // for (int idx : pt.curr_indices)
-        // {
-        //     if (pt.content[seg_idx].type == 1)
-        //     {
-        //         guess += m.letters[m.FindLetter(pt.content[seg_idx])].ordered_values[idx];
-        //     }
-        //     if (pt.content[seg_idx].type == 2)
-        //     {
-        //         guess += m.digits[m.FindDigit(pt.content[seg_idx])].ordered_values[idx];
-        //     }
-        //     if (pt.content[seg_idx].type == 3)
-        //     {
-        //         guess += m.symbols[m.FindSymbol(pt.content[seg_idx])].ordered_values[idx];
-        //     }
-        //     seg_idx += 1;
-        //     if (seg_idx == pt.content.size() - 1)
-        //     {
-        //         break;
-        //     }
-        // }
 
         SegmentLengthMaps * maps = SegmentLengthMaps::getInstance();
         string guess;
@@ -375,77 +282,50 @@ time_gpu_kernel += double(duration_gpu_kernel.count()) * microseconds::period::n
 
 
         // 指向最后一个segment的指针，这个指针实际指向模型中的统计数据
-        // segment *a;
         //BUGFIX 由于我add_task 里面只需要用到 seg 的type 和length 信息， 因此
         // 我觉得seg 就不应该有那些vector成员变量的，那些应该存在model 里面，seg 弄一些函数 
         // ，可以mapping到model 的相应 seg信息就好了。
         segment *a = &pt.content[pt.content.size() - 1];
-        // if (pt.content[pt.content.size() - 1].type == 1)
-        // {
-        //     a = &m.letters[m.FindLetter(pt.content[pt.content.size() - 1])];
-        // }
-        // if (pt.content[pt.content.size() - 1].type == 2)
-        // {
-        //     a = &m.digits[m.FindDigit(pt.content[pt.content.size() - 1])];
-        // }
-        // if (pt.content[pt.content.size() - 1].type == 3)
-        // {
-        //     a = &m.symbols[m.FindSymbol(pt.content[pt.content.size() - 1])];
-        // }
-        
-        // Multi-thread TODO：
-        // 这个for循环就是你需要进行并行化的主要部分了，特别是在多线程&GPU编程任务中
-        // 可以看到，这个循环本质上就是把模型中一个segment的所有value，赋值到PT中，形成一系列新的猜测
-        // 这个过程是可以高度并行化的
-        // for (int i = 0; i < pt.max_indices[pt.content.size() - 1]; i += 1)
-        // {
-        //     string temp = guess + a->ordered_values[i];
-        //     // cout << temp << endl;
-        //     guesses.emplace_back(temp);
-        //     total_guesses += 1;
-        // }
 
         //TODO 转变成添加任务的逻辑，并且任务数达到10_0000则launch, 有prefix
-        //BUG ?? 姑且认为 pt.max_indices[pt.content.size()-1] 其实就是a,只不过一个是pt里的副本，一个是model那里的。
-        // 因为存了好几遍所以显得乱。
 
-// #ifdef TIME_COUNT
+#ifdef TIME_COUNT
 auto start_gpu_kernel = system_clock::now();
-// #endif
+#endif
 
         task_manager->add_task(a, guess, *this);
         if(task_manager->guesscount > GPU_BATCH_SIZE){
-#ifdef USING_POOL
-            int current_pending = pending_task_count.load();  // 原子读取
-            cout << current_pending << endl;
-            pending_task_count++;
-            // 创建异步任务（使用移动语义）
-            AsyncGpuTask* async_task = new AsyncGpuTask(std::move(*task_manager));
+
+        // 🔥 关键：检查是否达到任务数限制
+            if (pending_task_count.load() >= MAX_PENDING_TASKS) {
+#ifdef DEBUG
+printf("[DEBUG] ⚠️ Max pending tasks (%d) reached, waiting...\n", MAX_PENDING_TASKS);
+#endif
+                // 等待当前任务完成
+                wait_for_pending_tasks();
+            }
+
+
+            // 创建异步任务数据 (移动语义 把 task_manager 搬走)
+            auto* async_task = new AsyncGpuTask(std::move(*task_manager));
             
             // 提交到线程池
-            thread_pool->enqueue([async_task, this]() {
+            thread_pool->enqueue([async_task, this](){// 不过这样做好像还是不能实际反应线程池任务数量。
+
                 async_gpu_task(async_task, *this);
+                pending_task_count--;    
+                int cur_task = pending_task_count.load();
+                cout << "now -1 has  " << cur_task << " tasks\n";
             });
-            
+            pending_task_count++;
+            int cur_task = pending_task_count.load();
+            cout << "now +1 has  " << cur_task << " tasks\n";
+
+
             // TaskManager已经被移动，重新创建一个新的
             task_manager = new TaskManager();
-#else
-            // 同步版本：预分配缓冲区，然后调用GPU kernel
-            char* h_guess_buffer = nullptr;
-            task_manager->launch_gpu_kernel(guesses, *this, h_guess_buffer);
-            // 将缓冲区指针添加到管理列表（统一管理）
-            {
-                std::lock_guard<std::mutex> lock(gpu_buffer_mutex);
-                pending_gpu_buffers.push_back(h_guess_buffer);
-            }
-#endif
         }
 
-#ifdef TIME_COUNT
-auto end_gpu_kernel = system_clock::now();
-auto duration_gpu_kernel = duration_cast<microseconds>(end_gpu_kernel - start_gpu_kernel);
-time_gpu_kernel += double(duration_gpu_kernel.count()) * microseconds::period::num / microseconds::period::den;
-#endif 
 
     }
 }

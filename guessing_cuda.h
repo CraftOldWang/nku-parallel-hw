@@ -4,16 +4,22 @@
 #include "PCFG.h"
 #include <numeric> // for std::accumulate
 #include <device_launch_parameters.h>
+#include <cuda_runtime.h>
+
 
 #include "config.h"
 
 
-#ifdef USING_POOL
 #include "ThreadPool.h"
 #include <mutex>
 #include <atomic>
+// 各种 外部变量。
 extern std::atomic<int> pending_task_count;  // 未完成的异步任务数量
-#endif
+extern mutex main_data_mutex;
+extern mutex gpu_buffer_mutex;
+extern std::vector<char*> pending_gpu_buffers;  // 等待释放的GPU缓冲区指针
+extern std::unique_ptr<ThreadPool> thread_pool;
+extern PriorityQueue q;
 
 
 
@@ -262,22 +268,88 @@ public:
 };
 
 
-#ifdef USING_POOL
 struct AsyncGpuTask {
     TaskManager task_manager;  // 直接移动，不用指针
-    vector<string_view> local_guesses;
-    char* gpu_buffer;
     
     // 移动构造函数
     AsyncGpuTask(TaskManager&& tm) 
-        : task_manager(std::move(tm))
-        , gpu_buffer(nullptr) {
-        local_guesses.reserve(task_manager.guesscount);
-    }
+        : task_manager(std::move(tm)){}
 };
 
 void async_gpu_task(AsyncGpuTask* task_data, PriorityQueue& q);
-#endif
+
+
+
+
+class AsyncGpuPipeline {
+public:
+
+    struct AsyncTaskData {
+        // 原有数据
+        TaskManager task_manager;
+        vector<string_view> local_guesses;
+        char* gpu_buffer;
+        
+        // ⚠️ 添加：保证数据生命周期
+        std::string all_prefixes;           // 保存连接的前缀字符串
+        std::vector<int> res_offset;        // 保存结果偏移量
+        std::vector<int> cumulative_offsets; // 保存累积偏移量
+        
+        // ⚠️ 添加：错误状态管理
+        std::atomic<bool> has_error{false};
+
+        // CUDA异步相关
+        cudaStream_t compute_stream;
+        
+        // GPU内存指针（用于异步释放）
+        char* temp_prefixs;
+        int* d_seg_types;
+        int* d_seg_ids;
+        int* d_seg_lens;
+        int* d_prefix_offsets;
+        int* d_prefix_lens;
+        int* d_seg_value_counts;
+        int* d_cumulative_guess_offsets;
+        int* d_output_offsets;
+        Taskcontent* d_tasks;
+        char* d_guess_buffer;
+        
+        // CPU内存指针
+        int* h_prefix_offsets;
+        
+        // 结果相关
+        size_t result_len;
+        
+        AsyncTaskData(TaskManager&& tm);
+        
+        ~AsyncTaskData();
+    };
+public:
+    static void launch_async_pipeline(TaskManager tm, PriorityQueue& q);
+    
+public:
+
+
+
+
+    
+
+    
+    // CUDA回调函数
+    static void CUDART_CB memory_copy_completion_callback(cudaStream_t stream, cudaError_t status, void* userData);
+    static void CUDART_CB async_cleanup_completion_callback(cudaStream_t stream, cudaError_t status, void* userData);
+
+
+};
+// 流水线阶段函数
+void prepare_gpu_data_stage(AsyncGpuPipeline::AsyncTaskData& data);
+void launch_kernel_stage(AsyncGpuPipeline::AsyncTaskData& data);
+void start_memory_copy_stage(AsyncGpuPipeline::AsyncTaskData& data);
+void process_strings_stage(AsyncGpuPipeline::AsyncTaskData& data);
+void merge_results_stage(AsyncGpuPipeline::AsyncTaskData& data);
+// 清理函数
+void cleanup_stage(AsyncGpuPipeline::AsyncTaskData& data);
+void asynchronous_cleanup(AsyncGpuPipeline::AsyncTaskData& data);
 
 
 
