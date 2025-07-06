@@ -4,6 +4,12 @@ main
 *.exe
 guessdata/
 
+fortest/
+build_bs5000000_gpt8_trn16/
+last_result/
+results/
+
+
 # --- CMake ---
 build/
 CMakeFiles/

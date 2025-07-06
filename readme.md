@@ -90,3 +90,8 @@ run_cuda 可以在支持avx 和 cuda 的地方一次性把我要做的所有跑�
 DEBUG 、 TIME_COUNT 可以启用一些调试信息（后者用来看哪里花的时间多）。
 最初比normal 慢 是因为，Findletter 那几个函数居然tm是线性查找。。。
 都是使用-O2，用 -O0 或者-O1 没啥意义说是。
+
+
+## 结束
+
+删除了一些结果txt，从而可以上传到github上了。
