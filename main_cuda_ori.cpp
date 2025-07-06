@@ -21,12 +21,15 @@ mutex main_data_mutex;           // 保护主要数据结构
 mutex gpu_buffer_mutex;         // 保护GPU缓冲区管理
 vector<char*> pending_gpu_buffers;  // 等待释放的GPU缓冲区指针
 
-#ifdef USING_POOL
 #include "ThreadPool.h"
 #include <atomic>
 std::atomic<int> pending_task_count(0);  // 初始化为0
 
+
+int expected_guess_num  = 0 ;
+
 std::unique_ptr<ThreadPool> thread_pool;  // 声明全局变量，但不初始化
+std::unique_ptr<ThreadPool> hash_thread_pool; // Hash专用线程池
 
 void perform_hash_calculation(PriorityQueue& q, double& time_hash) {
     auto start_hash = system_clock::now();
@@ -61,8 +64,61 @@ void perform_hash_calculation(PriorityQueue& q, double& time_hash) {
     auto duration = duration_cast<microseconds>(end_hash - start_hash);
     time_hash += double(duration.count()) * microseconds::period::num / microseconds::period::den;
 }
+void perform_hash_calculation_parallel(PriorityQueue& q, double& time_hash) {
+    auto start_hash = system_clock::now();
+    
+    const size_t total_guesses = q.guesses.size();
+    
+    
+    
+    if (total_guesses < 1000) {
+        // 串行SIMD处理
+        for (size_t i = 0; i < total_guesses; i += 8) {
+            string_view passwords[8];
+            for (int j = 0; j < 8; ++j) {
+                passwords[j] = (i + j < total_guesses) ? q.guesses[i + j] : "";
+            }
+            alignas(32) __m256i state[4];
+            MD5Hash_AVX(passwords, state);
+        }
+    } else {
 
-#endif
+        const size_t num_threads = std::min(static_cast<size_t>(HASH_THREAD_NUM), total_guesses / 100);
+        const size_t chunk_size = total_guesses / num_threads;
+        
+        std::vector<std::future<void>> hash_futures;
+        
+        for (size_t t = 0; t < num_threads; ++t) {
+            size_t start_idx = t * chunk_size;
+            size_t end_idx = (t == num_threads - 1) ? total_guesses : (t + 1) * chunk_size;
+            
+            hash_futures.push_back(hash_thread_pool->enqueue([&q, start_idx, end_idx]() {
+                // 每个线程处理自己的chunk，使用AVX
+                for (size_t i = start_idx; i < end_idx; i += 8) {
+                    string_view passwords[8];
+                    for (int j = 0; j < 8; ++j) {
+                        if (i + j < end_idx) {
+                            passwords[j] = q.guesses[i + j];
+                        } else {
+                            passwords[j] = "";
+                        }
+                    }
+                    alignas(32) __m256i state[4];
+                    MD5Hash_AVX(passwords, state);
+                }
+            }));
+        }
+        
+        // 等待所有hash任务完成
+        for (auto& future : hash_futures) {
+            future.wait();
+        }
+    }
+    
+    auto end_hash = system_clock::now();
+    auto duration = duration_cast<microseconds>(end_hash - start_hash);
+    time_hash += double(duration.count()) * microseconds::period::num / microseconds::period::den;
+}
 
 //BUG 需要确保 产生的 猜测 每次 都 大于 1000000 ， 因为我只管理了一个 这个指针
 // 然后需要每次生成猜测， 都把所有hash掉。
@@ -103,6 +159,21 @@ const ExperimentConfig EXPERIMENTS[] = {
     {40000000, 1000000, "数据集/小批次"},
     {45000000, 1000000, "数据集/小批次"},
     {50000000, 1000000, "数据集/小批次"},
+
+    // 亿级别 (感觉跑hash 需要比较多秒？线程池给多一点吧)
+    {100000000, 1000000, "数据集/小批次"},
+    {150000000, 1000000, "数据集/小批次"},
+    {200000000, 1000000, "数据集/小批次"},
+    {250000000, 1000000, "数据集/小批次"},
+    {300000000, 1000000, "数据集/小批次"},
+    {350000000, 1000000, "数据集/小批次"},
+    {400000000, 1000000, "数据集/小批次"},
+    {450000000, 1000000, "数据集/小批次"},
+    {500000000, 1000000, "数据集/小批次"},
+
+    // 十亿级别
+    {1000000000, 1000000, "数据集/小批次"},
+
 };
 
 // 要运行的实验数量
@@ -122,6 +193,8 @@ int main()
 #ifdef USING_POOL
     // 在main函数开始时初始化线程池
     thread_pool = make_unique<ThreadPool>(THREAD_NUM);
+    hash_thread_pool = make_unique<ThreadPool>(HASH_THREAD_NUM); // Hash计算
+
 #endif
 
     task_manager = new TaskManager();
@@ -185,6 +258,7 @@ cout << "time transfer gpu :" << time_transfergpu << endl;
     for (int exp_idx = 0; exp_idx < NUM_EXPERIMENTS; exp_idx++) {
         // 获取当前实验配置
         int GENERATE_N = EXPERIMENTS[exp_idx].generate_n;
+        // 历史遗留。。。没用了。
         int NUM_PER_HASH = EXPERIMENTS[exp_idx].batch_size;
         const char* LABEL = EXPERIMENTS[exp_idx].label;
         
@@ -192,7 +266,8 @@ cout << "time transfer gpu :" << time_transfergpu << endl;
         cout << "实验 #" << (exp_idx + 1) << ": " << LABEL << endl;
         cout << "猜测上限: " << GENERATE_N << ", 批处理大小: " << NUM_PER_HASH << "， GPU批处理大小：" << GPU_BATCH_SIZE << ", 每个线程处理的guess数："<< GUESS_PER_THREAD;
 #ifdef USING_POOL
-        cout << "， 线程池线程数: "<< THREAD_NUM;
+        cout << "， guess生成线程池线程数: "<< THREAD_NUM;
+        cout << ", hash 线程池线程数: " << HASH_THREAD_NUM;
 #endif
         cout << endl;
         cout << "==========================================" << endl;
@@ -206,6 +281,7 @@ cout <<" 开始初始化队列" <<endl;
 #ifdef TIME_COUNT
 auto init_time_start = system_clock::now();
 #endif
+        
         // 重置队列
         q.init();
         q.guesses.clear();
@@ -230,42 +306,69 @@ cout <<" 初始化队列完毕" <<endl;
 #endif
         auto start = system_clock::now();
         int history = 0;
-
+        expected_guess_num = 0; 
         while (!q.priority.empty()) {
 #ifdef TIME_COUNT
 auto start_pop_next = system_clock::now();
 #endif
 
-#ifdef DEBUG
-// cout <<"1"<<endl;
+            if (expected_guess_num < GENERATE_N) {
+                q.PopNext();
+            } else {
+#ifdef SLEEP_COUT
+                cout << "sleep for a while\n";
 #endif
-            q.PopNext();
+                // 为了看能否见缝插针地hash ， 这里不敢wait
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
 
-
-#ifdef DEBUG
-// cout <<" 2" <<endl;
-
-#endif
 #ifdef TIME_COUNT
 auto end_pop_next = system_clock::now();
 auto duration_pop_next = duration_cast<microseconds>(end_pop_next - start_pop_next);
 time_pop_next += double(duration_pop_next.count()) * microseconds::period::num / microseconds::period::den;
 #endif
-            int check_guess_count;
+
+
+            // 检查是否需要进行哈希计算
+            bool should_hash;
             {
-                std::lock_guard<std::mutex> lock(main_data_mutex);
-                check_guess_count = q.guesses.size();
+                std::lock_guard<std::mutex> lock1(main_data_mutex);
+                std::lock_guard<std::mutex> lock2(gpu_buffer_mutex);      
+                should_hash = !pending_gpu_buffers.empty();
+            }
+            
+            //BUG 要设置每个 GPU 批次大于这个值.... 或者干脆别设置这个
+            if (should_hash) {                
+                // 执行哈希计算和缓冲区清理
+                {
+                    std::lock_guard<std::mutex> lock1(main_data_mutex);
+                    std::lock_guard<std::mutex> lock2(gpu_buffer_mutex);
+                    
+                    perform_hash_calculation_parallel(q, time_hash);
+                    
+                    // 释放所有GPU缓冲区
+                    for (char* buffer : pending_gpu_buffers) {
+                        delete[] buffer;
+                    }
+                    pending_gpu_buffers.clear();
+                    
+                    // 更新历史记录并清空guesses
+                    history += q.guesses.size();
+                    q.guesses.clear();
+                }
             }
 
+
+
             // 检查是否达到当前实验的猜测上限
-            if (history + check_guess_count > GENERATE_N) {
+            if (history  >= GENERATE_N) {
                 auto end = system_clock::now();
                 auto duration = duration_cast<microseconds>(end - start);
                 time_guess = double(duration.count()) * microseconds::period::num / microseconds::period::den;
 
                     cout << "\n--- 实验结果 ---" << endl;
                     cout << "猜测上限: " << GENERATE_N << ", 批处理大小: " << NUM_PER_HASH << endl;
-                    cout << "Guesses generated: " << history + check_guess_count << endl;
+                    cout << "Guesses generated: " << history  << endl;
                     cout << "Guess time: " << time_guess - time_hash << " seconds" << endl;
                     cout << "Hash time: " << time_hash << " seconds" << endl;
                     cout << "Train time: " << time_train << " seconds" << endl;
@@ -290,99 +393,20 @@ cout << "time_all_batch: " << time_all_batch << " seconds" << endl <<endl;
                 break;
             }
 
-            // 检查是否需要进行哈希计算
-#ifdef USING_POOL
-            int current_guess_count;
-            {
-                std::lock_guard<std::mutex> lock(main_data_mutex);
-                current_guess_count = q.guesses.size();
-            }
-            
-            if (current_guess_count >= NUM_PER_HASH) {
-                // 等待所有异步任务完成（需要实现等待机制）
-                
-                // 执行哈希计算和缓冲区清理
-                {
-                    std::lock_guard<std::mutex> lock1(main_data_mutex);
-                    std::lock_guard<std::mutex> lock2(gpu_buffer_mutex);
-                    
-                    perform_hash_calculation(q, time_hash);
-                    
-                    // 释放所有GPU缓冲区
-                    for (char* buffer : pending_gpu_buffers) {
-                        delete[] buffer;
-                    }
-                    pending_gpu_buffers.clear();
-                    
-                    // 更新历史记录并清空guesses
-                    history += q.guesses.size();
-                    q.guesses.clear();
-                }
-            }
-#else
-            if (q.guesses.size() >= NUM_PER_HASH) {
-                perform_hash_calculation(q, time_hash);
-                
-                // 记录已经生成的口令总数
-                history += q.guesses.size();
-                q.guesses.clear();
-                
-                // 统一使用缓冲区管理，释放所有GPU缓冲区
-                {
-                    std::lock_guard<std::mutex> lock(gpu_buffer_mutex);
-                    for (char* buffer : pending_gpu_buffers) {
-                        delete[] buffer;
-                    }
-                    pending_gpu_buffers.clear();
-                }
-            }
-#endif
         }
-
-        // 最后的哈希计算（处理剩余的guesses）
-#ifdef USING_POOL
-        {
-            std::lock_guard<std::mutex> lock1(main_data_mutex);
-            std::lock_guard<std::mutex> lock2(gpu_buffer_mutex);
-            
-            if (!q.guesses.empty()) {
-                perform_hash_calculation(q, time_hash);
-                history += q.guesses.size();
-            }
-            
-            // 清理剩余GPU缓冲区
-            for (char* buffer : pending_gpu_buffers) {
-                delete[] buffer;
-            }
-            pending_gpu_buffers.clear();
-        }
-#else
-        if (!q.guesses.empty()) {
-            perform_hash_calculation(q, time_hash);
-            history += q.guesses.size();
-        }
-        
-        // 清理剩余GPU缓冲区（非线程池模式）
-        {
-            std::lock_guard<std::mutex> lock(gpu_buffer_mutex);
-            for (char* buffer : pending_gpu_buffers) {
-                delete[] buffer;
-            }
-            pending_gpu_buffers.clear();
-        }
-#endif
-
         // 清理TaskManager
         task_manager->clean();
         
-#ifdef USING_POOL
         // 每轮实验结束后，等待线程池所有任务完成并清理
         cout << "等待线程池任务完成..." << endl;
         try {
             // 按照 main_pool.cpp 的方式清理并重建线程池
             thread_pool.reset();  // 销毁当前线程池，等待所有任务完成
             thread_pool = make_unique<ThreadPool>(THREAD_NUM);  // 重新创建
-            
+
+            hash_thread_pool.reset();
+            hash_thread_pool = make_unique<ThreadPool>(HASH_THREAD_NUM);
+
             // 确保在安全状态下清空相关向量
             {
                 std::lock_guard<std::mutex> lock1(main_data_mutex);
@@ -414,7 +438,7 @@ cout << "time_all_batch: " << time_all_batch << " seconds" << endl <<endl;
         time_all_batch = 0;
 #endif
         cout << "实验 #" << (exp_idx + 1) << " 完成，线程池已清理" << endl;
-#endif
+        
     }
 
     clean_gpu_ordered_values_data(gpu_data);

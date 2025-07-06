@@ -15,7 +15,7 @@ find_package(CUDAToolkit REQUIRED)
 
 # 源码文件列表
 set(SOURCES
-    ${CMAKE_SOURCE_DIR}/correctness_guess.cpp
+    ${CMAKE_SOURCE_DIR}/main_cuda_ori.cpp
     ${CMAKE_SOURCE_DIR}/guessing.cpp
     ${CMAKE_SOURCE_DIR}/guessing_cuda.cu
     ${CMAKE_SOURCE_DIR}/train.cpp

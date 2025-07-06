@@ -6,6 +6,7 @@ mkdir -p ./cur_result
 mkdir -p build
 mkdir -p cur_result_all
 mkdir -p ./cur_result_all/seetime
+mkdir -p ./last_result/
 # for bsize in 10000; do
 #     echo "🔧 编译 普通的-O2"
 
@@ -25,18 +26,20 @@ mkdir -p ./cur_result_all/seetime
 # done
 
 
-
-
+# 既然可以提前预知。。。那么等到一定量就不要 再做任务了。
+# 整一个 特别大的。。。。比如  生成100000000 个？ 反正每次hash都会清除, 内存应该不会爆。 现在这样好像体现不出来性能
+# 另外hash 也 ， 尝试多线程，因为
+# 让 AI 给画 那种 与两个坐标有关， 然后加速比什么的。
 # avx+ 线程池 + cuda
 # 用那个 string_view 的话就一次需要产出 >=100000个 guess
 # 100000 1000000 5000000 10000000
 CL_PATH="D:\Softwares\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.41.34120\bin\Hostx64\x64\cl.exe"
-# for bsize in  100000 500000 1000000 5000000 10000000 ; do
-for bsize in 1000000 ; do
-    # for gptread in 1 4 16 64 ; do
-    for gptread in  4 ; do
-        # for threadnum in 2 8 32; do
-        for threadnum in  8 ; do
+for bsize in  100000 500000 1000000 5000000 10000000 ; do
+# for bsize in 100000  ; do
+    for gptread in 1 4 16 64 ; do
+    # for gptread in  4  ; do
+        for threadnum in 2 8 16 32; do
+        # for threadnum in  8  ; do
 
             echo "🔧 编译 cuda GPU_BATCH_SIZE=$bsize , guess per thread ${gptread} , thread num ${threadnum}"
 
@@ -65,8 +68,8 @@ for bsize in 1000000 ; do
             fi
 
             echo "🚀 运行 GPU_BATCH_SIZE=$bsize , guess per thread ${gptread} , thread num ${threadnum}"
-            ./build/guess_bs${bsize}_gpt${gptread}_trn${threadnum}  > ./cur_result_all/seetime/result_${bsize}_${gptread}_${threadnum}.txt
-            echo "✅ 输出保存到 result_${bsize}_gpt${gptread}_thn${threadnum}.txt"
+            ./build/guess_bs${bsize}_gpt${gptread}_trn${threadnum}  > ./last_result/result_${bsize}_${gptread}_${threadnum}.txt
+            echo "✅ 输出保存到 ./last_result/result_${bsize}_gpt${gptread}_thn${threadnum}.txt"
         done
     done
 done

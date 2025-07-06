@@ -9,16 +9,25 @@
 #endif
 // #define USING_MPI // 定义宏以启用MPI并行处理
 
-#define USING_SMALL
+// #define USING_SMALL
 #ifndef USING_POOL
 #define USING_POOL
 #endif
-// #define THREAD_NUM 8 // 线程池的线程数
+
+// #ifndef THREAD_NUM
+// #define THREAD_NUM 8 // 线程池的线程数 , 是脚本的参数， 所以其实这里没有用
+// #endif
+
+#ifndef HASH_THREAD_NUM
+#define HASH_THREAD_NUM 32  // Hash线程池大小，可以独立调整  不作为脚本的参数.... 
+#endif
 
 // CUDA GPU parameters
-// #ifndef GUESS_PER_THREAD
-// #define GUESS_PER_THREAD 8  // Default value if not defined at compile time
-// #endif
+#ifndef GUESS_PER_THREAD
+#define GUESS_PER_THREAD 8  // Default value if not defined at compile time
+#endif
+
+
 
 // 每 10_0000 个guess 拿去给gpu处理一下
 // #define GPU_BATCH_SIZE 100000
@@ -27,5 +36,5 @@
 // 编译命令
 // chcp 65001 && & "D:\Softwares\Git\bin\bash.exe" "run_cuda.sh"
 
-#define TIME_COUNT
+// #define TIME_COUNT
 #endif

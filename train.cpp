@@ -418,7 +418,9 @@ void model::parse(string pw)
     if (FindPT(pt) == -1)
     {   
         // cout << "jweiofjwieo" <<endl;
-        for (int i = 0; i < pt.content.size(); i += 1)
+        //BUG 这里明明弄了 content.size()个， 外面却说只记录了 n-1个， 也不知道是哪里要用到，先不改。
+        //FIX 尝试 用 size() - 1 ， 这样里面只有 n-1个。希望别出问题。
+        for (int i = 0; i < pt.content.size() - 1; i += 1)
         {
             pt.curr_indices.emplace_back(0);
         }

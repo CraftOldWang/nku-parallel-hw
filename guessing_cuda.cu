@@ -34,6 +34,11 @@ extern std::vector<char*> pending_gpu_buffers;  // 等待释放的GPU缓冲区�
 extern mutex main_data_mutex;
 extern mutex gpu_buffer_mutex;
 
+
+
+extern int expected_guess_num;
+
+
 #ifdef USING_POOL
 void async_gpu_task(AsyncGpuTask* task_data, PriorityQueue& q) {
     try {
@@ -69,7 +74,7 @@ void async_gpu_task(AsyncGpuTask* task_data, PriorityQueue& q) {
     }
     
     // 3. 任务完成，减少计数
-    pending_task_count--;  // 原子操作，线程安全
+    // pending_task_count--;  // 原子操作，线程安全
 
 
     // Clean up task data
@@ -253,6 +258,8 @@ auto start_add_task = system_clock::now();
     taskcount++;
     seg_value_count.push_back(seginmodel.ordered_values.size());  
     guesscount += seginmodel.ordered_values.size();
+
+    expected_guess_num += seg->ordered_values.size();
 
 #ifdef DEBUG
     cout << "Added task: ";
